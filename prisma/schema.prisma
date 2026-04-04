@@ -1,0 +1,153 @@
+// Prisma schema — includes workflow-1 + workflow-2 models + workflow-3 additions
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Workflow 1 models ────────────────────────────────────────────────────────
+
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  phone     String    @unique
+  password  String
+  firstName String?
+  lastName  String?
+  avatar    String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  issues   Issue[]
+  upvotes  Upvote[]
+  comments Comment[]
+
+  @@map("users")
+}
+
+model Issue {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  category    String
+  status      String   @default("Pending") // Pending | In Progress | Resolved | Rejected
+  image       String?
+  latitude    Float
+  longitude   Float
+  address     String?
+  upvoteCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  upvotes    Upvote[]
+  comments   Comment[]
+  statusLogs StatusLog[]
+
+  @@index([userId])
+  @@index([category])
+  @@index([status])
+  @@map("issues")
+}
+
+model Upvote {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  issueId String
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, issueId])
+  @@index([userId])
+  @@index([issueId])
+  @@map("upvotes")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  issueId String
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([issueId])
+  @@map("comments")
+}
+
+// ─── Workflow 2 models ────────────────────────────────────────────────────────
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  statusLogs StatusLog[]
+  reports    Report[]    // workflow-3 relation
+
+  @@map("admins")
+}
+
+model StatusLog {
+  id        Int      @id @default(autoincrement())
+  issueId   String
+  adminId   Int
+  oldStatus String?
+  newStatus String
+  remarks   String?
+  changedAt DateTime @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  admin Admin @relation(fields: [adminId], references: [id])
+
+  @@index([issueId])
+  @@index([adminId])
+  @@map("status_logs")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  issueId   String?
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+// ─── Workflow 3 models ────────────────────────────────────────────────────────
+
+model Report {
+  id        Int      @id @default(autoincrement())
+  adminId   Int
+  title     String
+  filters   Json     @default("{}") // stores filter config used to generate the report
+  csvData   String?  @db.Text       // stores the raw CSV content
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("reports")
+}
