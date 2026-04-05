@@ -84,7 +84,7 @@ router.get('/:id/download', async (req, res) => {
       return res.status(404).json({ error: 'This report has no CSV data' });
     }
 
-    const filename = `report_${report.id}_${report.title.replace(/\s+/g, '_')}.csv`;
+    const filename = `report_${report.id}_${report.title.replace(/[^a-zA-Z0-9_\-]/g, '_')}.csv`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.status(200).send(report.csvData);
