@@ -16,9 +16,34 @@ app.get('/', (_req, res) => {
     message: 'CivicReport API — All Workflows',
     version: '3.0.0',
     endpoints: {
-      citizen:   '/api/users, /api/issues, /api/upvotes, /api/comments',
-      admin:     '/api/admin, /api/admin/issues, /api/status-logs, /api/notifications',
-      analytics: '/api/analytics, /api/reports',
+      citizen: {
+        'POST /api/users/register': 'Register citizen',
+        'POST /api/users/login': 'Login with email or phone',
+        'POST /api/issues': 'Report an issue',
+        'GET /api/issues': 'List all issues',
+        'GET /api/issues/nearby': 'Nearby issues',
+        'POST /api/upvotes': 'Upvote an issue',
+        'POST /api/comments': 'Comment on an issue',
+        'GET /api/users/notifications': 'Citizen notifications',
+      },
+      admin: {
+        'POST /api/admin/register': 'Register admin',
+        'POST /api/admin/login': 'Admin login',
+        'GET /api/admin/issues': 'List all issues',
+        'PUT /api/admin/issues/:id': 'Update issue status',
+        'GET /api/status-logs/issue/:id': 'Status history',
+        'GET /api/notifications': 'Admin notifications',
+      },
+      analytics: {
+        'GET /api/analytics/overview': 'Overview stats',
+        'GET /api/analytics/by-category': 'By category',
+        'GET /api/analytics/top-categories': 'Top categories',
+        'GET /api/analytics/by-area': 'By area',
+        'GET /api/analytics/trends': 'Trend data',
+        'GET /api/analytics/export': 'CSV export (admin)',
+        'POST /api/reports': 'Save report (admin)',
+        'GET /api/reports': 'List reports (admin)',
+      },
     },
   });
 });
