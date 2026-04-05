@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const jwt    = require('jsonwebtoken');
 const prisma = require('../db/connection');
+const { sendPasswordResetEmail } = require('./emailService');
 
 async function registerAdmin({ email, password, name }) {
   if (!email || !password) {
@@ -86,7 +87,7 @@ async function updateAdmin(id, { name, email }) {
   }
 
   const data = {};
-  if (name)  data.name = name;
+  if (name)  data.name  = name;
   if (email) data.email = email;
 
   try {
@@ -123,4 +124,86 @@ async function deleteAdmin(id) {
   }
 }
 
-module.exports = { registerAdmin, loginAdmin, getAdminById, updateAdmin, deleteAdmin };
+async function forgotPasswordAdmin({ email }) {
+  if (!email) {
+    const err = new Error('Email is required');
+    err.status = 400;
+    throw err;
+  }
+
+  const admin = await prisma.admin.findUnique({ where: { email } });
+
+  // Don't reveal whether email exists
+  if (!admin) {
+    return { message: 'If this email is registered, a reset token has been sent.' };
+  }
+
+  const resetToken       = Math.floor(100000 + Math.random() * 900000).toString();
+  const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await prisma.admin.update({
+    where: { email },
+    data: { resetToken, resetTokenExpiry },
+  });
+
+  await sendPasswordResetEmail(email, resetToken);
+
+  return { message: 'If this email is registered, a reset token has been sent.' };
+}
+
+async function resetPasswordAdmin({ email, token, newPassword }) {
+  if (!email || !token || !newPassword) {
+    const err = new Error('Email, token, and new password are required');
+    err.status = 400;
+    throw err;
+  }
+
+  if (newPassword.length < 6) {
+    const err = new Error('Password must be at least 6 characters');
+    err.status = 400;
+    throw err;
+  }
+
+  const admin = await prisma.admin.findUnique({ where: { email } });
+
+  if (!admin || !admin.resetToken || !admin.resetTokenExpiry) {
+    const err = new Error('Invalid or expired reset token');
+    err.status = 400;
+    throw err;
+  }
+
+  if (admin.resetToken !== token) {
+    const err = new Error('Invalid or expired reset token');
+    err.status = 400;
+    throw err;
+  }
+
+  if (new Date() > admin.resetTokenExpiry) {
+    const err = new Error('Reset token has expired. Please request a new one.');
+    err.status = 400;
+    throw err;
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await prisma.admin.update({
+    where: { email },
+    data: {
+      password:        hashedPassword,
+      resetToken:      null,
+      resetTokenExpiry: null,
+    },
+  });
+
+  return { message: 'Password reset successfully' };
+}
+
+module.exports = {
+  registerAdmin,
+  loginAdmin,
+  getAdminById,
+  updateAdmin,
+  deleteAdmin,
+  forgotPasswordAdmin,
+  resetPasswordAdmin,
+};
