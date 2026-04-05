@@ -1,0 +1,9 @@
+-- Workflow 2 uses Prisma to manage the database schema.
+-- Do NOT run raw SQL to create tables.
+--
+-- To initialise the database, run:
+--   npx prisma migrate dev --name init-workflow2
+--
+-- This will apply prisma/schema.prisma and create all tables:
+--   users, issues, upvotes, comments (workflow-1)
+--   admins, status_logs, notifications  (workflow-2)
