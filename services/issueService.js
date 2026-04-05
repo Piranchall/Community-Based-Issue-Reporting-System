@@ -157,11 +157,14 @@ const getIssueById = async (issueId) => {
     });
 
     if (!issue) {
-      throw new Error('Issue not found');
+      const err = new Error('Issue not found');
+      err.status = 404;
+      throw err;
     }
 
     return issue;
   } catch (error) {
+    if (error.status) throw error;
     throw new Error(`Failed to fetch issue: ${error.message}`);
   }
 };

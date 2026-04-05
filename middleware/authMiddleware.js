@@ -7,10 +7,16 @@ const authMiddleware = (req, res, next) => {
     return res.status(401).json({ error: 'Missing or invalid authorization token' });
   }
 
-  const token = authHeader.slice(7); // Remove 'Bearer ' prefix
+  const token = authHeader.slice(7);
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Admin tokens must not be used on citizen routes
+    if (decoded.role === 'admin') {
+      return res.status(403).json({ error: 'Access denied: admin token cannot be used on citizen routes' });
+    }
+
     req.user = decoded;
     next();
   } catch (error) {
