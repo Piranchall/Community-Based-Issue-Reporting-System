@@ -12,15 +12,17 @@ datasource db {
 // ─── Workflow 1 models ────────────────────────────────────────────────────────
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  phone     String    @unique
-  password  String
-  firstName String?
-  lastName  String?
-  avatar    String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  email            String    @unique
+  phone            String    @unique
+  password         String
+  firstName        String?
+  lastName         String?
+  avatar           String?
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   issues   Issue[]
   upvotes  Upvote[]
@@ -92,16 +94,18 @@ model Comment {
 // ─── Workflow 2 models ────────────────────────────────────────────────────────
 
 model Admin {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String?
-  role      String   @default("admin")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               Int       @id @default(autoincrement())
+  email            String    @unique
+  password         String
+  name             String?
+  role             String    @default("admin")
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   statusLogs StatusLog[]
-  reports    Report[]    // workflow-3 relation
+  reports    Report[]
 
   @@map("admins")
 }
@@ -141,8 +145,8 @@ model Report {
   id        Int      @id @default(autoincrement())
   adminId   Int
   title     String
-  filters   Json     @default("{}") // stores filter config used to generate the report
-  csvData   String?  @db.Text       // stores the raw CSV content
+  filters   Json     @default("{}")
+  csvData   String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
