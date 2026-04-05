@@ -1237,3 +1237,246 @@ GET {{baseUrl}}/api/users/notifications
 Authorization: Bearer {{citizen2Token}}
 
 ###
+
+### ================================================================
+### SECTION 9 — FORGOT PASSWORD (Citizen)
+### ================================================================
+
+### [9.1] Request password reset — valid email
+### Expected: 200 — "If this email is registered, a reset token has been sent."
+### Check hmazhar008@gmail.com inbox for the 6-digit token
+POST {{baseUrl}}/api/users/forgot-password
+Content-Type: application/json
+
+{
+  "email": "john@example.com"
+}
+
+###
+
+### [9.2] Request password reset — email not registered
+### Expected: 200 — same generic message (does not reveal if email exists)
+POST {{baseUrl}}/api/users/forgot-password
+Content-Type: application/json
+
+{
+  "email": "doesnotexist@example.com"
+}
+
+###
+
+### [9.3] Request password reset — missing email → should return 400
+POST {{baseUrl}}/api/users/forgot-password
+Content-Type: application/json
+
+{}
+
+###
+
+### [9.4] Reset password — valid token from email
+### Replace PASTE_TOKEN_HERE with the 6-digit token received in email
+POST {{baseUrl}}/api/users/reset-password
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "token": "PASTE_TOKEN_HERE",
+  "newPassword": "newpassword123"
+}
+
+###
+
+### [9.5] Login with NEW password — should return 200
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "newpassword123"
+}
+
+###
+
+### [9.6] Login with OLD password — should return 401 (password changed)
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+
+###
+
+### [9.7] Try to reuse the same token → should return 400 (token cleared after use)
+POST {{baseUrl}}/api/users/reset-password
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "token": "PASTE_SAME_TOKEN_HERE",
+  "newPassword": "anotherpassword123"
+}
+
+###
+
+### [9.8] Reset with wrong token → should return 400
+POST {{baseUrl}}/api/users/reset-password
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "token": "000000",
+  "newPassword": "newpassword123"
+}
+
+###
+
+### [9.9] Reset with password too short → should return 400
+POST {{baseUrl}}/api/users/reset-password
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "token": "PASTE_TOKEN_HERE",
+  "newPassword": "abc"
+}
+
+###
+
+### [9.10] Missing fields → should return 400
+POST {{baseUrl}}/api/users/reset-password
+Content-Type: application/json
+
+{
+  "email": "john@example.com"
+}
+
+###
+
+### [9.11] Login with phone + new password (verify phone login still works)
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
+
+{
+  "phone": "+923001234567",
+  "password": "newpassword123"
+}
+
+###
+
+
+### ================================================================
+### SECTION 10 — FORGOT PASSWORD (Admin)
+### ================================================================
+
+### [10.1] Admin requests password reset — valid email
+### Expected: 200 — check inbox for 6-digit token
+POST {{baseUrl}}/api/admin/forgot-password
+Content-Type: application/json
+
+{
+  "email": "admin@civicreport.com"
+}
+
+###
+
+### [10.2] Admin requests reset — email not registered
+### Expected: 200 — same generic message
+POST {{baseUrl}}/api/admin/forgot-password
+Content-Type: application/json
+
+{
+  "email": "notanadmin@example.com"
+}
+
+###
+
+### [10.3] Admin requests reset — missing email → should return 400
+POST {{baseUrl}}/api/admin/forgot-password
+Content-Type: application/json
+
+{}
+
+###
+
+### [10.4] Admin resets password — valid token
+### Replace PASTE_ADMIN_TOKEN_HERE with the 6-digit token from email
+POST {{baseUrl}}/api/admin/reset-password
+Content-Type: application/json
+
+{
+  "email": "admin@civicreport.com",
+  "token": "PASTE_ADMIN_TOKEN_HERE",
+  "newPassword": "newadminpass123"
+}
+
+###
+
+### [10.5] Admin logs in with NEW password — should return 200
+POST {{baseUrl}}/api/admin/login
+Content-Type: application/json
+
+{
+  "email": "admin@civicreport.com",
+  "password": "newadminpass123"
+}
+
+###
+
+### [10.6] Admin logs in with OLD password — should return 401
+POST {{baseUrl}}/api/admin/login
+Content-Type: application/json
+
+{
+  "email": "admin@civicreport.com",
+  "password": "admin123"
+}
+
+###
+
+### [10.7] Admin reuses same token → should return 400 (token cleared after use)
+POST {{baseUrl}}/api/admin/reset-password
+Content-Type: application/json
+
+{
+  "email": "admin@civicreport.com",
+  "token": "PASTE_SAME_ADMIN_TOKEN_HERE",
+  "newPassword": "anotherpass123"
+}
+
+###
+
+### [10.8] Admin resets with wrong token → should return 400
+POST {{baseUrl}}/api/admin/reset-password
+Content-Type: application/json
+
+{
+  "email": "admin@civicreport.com",
+  "token": "000000",
+  "newPassword": "newadminpass123"
+}
+
+###
+
+### [10.9] Admin resets with short password → should return 400
+POST {{baseUrl}}/api/admin/reset-password
+Content-Type: application/json
+
+{
+  "email": "admin@civicreport.com",
+  "token": "PASTE_ADMIN_TOKEN_HERE",
+  "newPassword": "abc"
+}
+
+###
+
+### [10.10] Missing fields → should return 400
+POST {{baseUrl}}/api/admin/reset-password
+Content-Type: application/json
+
+{
+  "email": "admin@civicreport.com"
+}
+
+###

@@ -34,14 +34,17 @@ A community-driven backend where citizens report local issues, authorities manag
 # 1. Install dependencies
 npm install
 
-# 2. Configure environment
-cp .env.example .env
-# Fill in DATABASE_URL and JWT_SECRET
+# 2. Install nodemailer (required for forgot password email feature)
+npm install nodemailer
 
-# 3. Run migrations
+# 3. Configure environment
+cp .env.example .env
+# Fill in all values in .env (see Environment Variables section below)
+
+# 4. Run migrations
 npx prisma migrate dev --name init
 
-# 4. Start server
+# 5. Start server
 node server.js
 # Running on http://localhost:5001
 ```
@@ -49,9 +52,28 @@ node server.js
 **.env values:**
 ```env
 DATABASE_URL=postgresql://postgres:password@localhost:5432/civicreport
-JWT_SECRET=your_secret_here
+JWT_SECRET=your_secret_key_here
 PORT=5001
 NODE_ENV=development
+EMAIL_USER=your_gmail_address@gmail.com
+EMAIL_PASS=your_gmail_app_password_here
+```
+**Getting Gmail App Password:**
+1. Go to your Google Account → Security
+2. Enable 2-Step Verification
+3. Go to Security → App Passwords
+4. Select app: Mail, device: Windows Computer
+5. Copy the 16-character password into `EMAIL_PASS`
+
+---
+
+## Run with Docker (PostgreSQL)
+
+```bash
+docker run --name civicreport-db \
+  -e POSTGRES_PASSWORD=postgres123 \
+  -e POSTGRES_DB=civicreport \
+  -p 5432:5432 -d postgres
 ```
 
 ---
