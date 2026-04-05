@@ -87,6 +87,8 @@ docker run --name civicreport-db \
 |---|---|---|---|
 | POST | `/api/users/register` | No | Register (email + phone) |
 | POST | `/api/users/login` | No | Login with email **or** phone |
+| POST | `/api/users/forgot-password` | No | Request password reset token via email |
+| POST | `/api/users/reset-password` | No | Reset password using token from email |
 | POST | `/api/issues` | Yes | Report issue (image upload supported) |
 | GET | `/api/issues` | No | List issues — `?sortBy=priority`, `?area=`, `?category=` |
 | GET | `/api/issues/nearby` | No | Issues near coordinates — `?latitude=&longitude=&radius=` |
@@ -134,11 +136,14 @@ GET /api/issues/nearby?latitude=24.8607&longitude=67.0011&radius=5
 |---|---|---|---|
 | POST | `/api/admin/register` | No | Create admin account |
 | POST | `/api/admin/login` | No | Admin login |
+| POST | `/api/admin/forgot-password` | No | Request admin password reset via email |
+| POST | `/api/admin/reset-password` | No | Reset admin password using token |
 | GET | `/api/admin/issues` | Admin | List issues — `?area=`, `?category=`, `?status=`, `?dateFrom=`, `?dateTo=`, `?sortBy=upvoteCount` |
 | GET | `/api/admin/issues/:id` | Admin | Full detail + status history |
 | PUT | `/api/admin/issues/:id` | Admin | Update status + remarks → auto-notifies reporter & upvoters |
 | GET | `/api/status-logs/issue/:issueId` | Admin | Status change history |
 | GET | `/api/notifications` | Admin | Admin notifications |
+
 
 **Query params for GET /api/admin/issues:**
 
