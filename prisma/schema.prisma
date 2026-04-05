@@ -1,4 +1,4 @@
-// Prisma schema — includes workflow-1 models + workflow-2 additions
+// Prisma schema — includes workflow-1 + workflow-2 models + workflow-3 additions
 
 generator client {
   provider = "prisma-client-js"
@@ -48,7 +48,7 @@ model Issue {
 
   upvotes    Upvote[]
   comments   Comment[]
-  statusLogs StatusLog[] // workflow-2 relation
+  statusLogs StatusLog[]
 
   @@index([userId])
   @@index([category])
@@ -101,6 +101,7 @@ model Admin {
   updatedAt DateTime @updatedAt
 
   statusLogs StatusLog[]
+  reports    Report[]    // workflow-3 relation
 
   @@map("admins")
 }
@@ -132,4 +133,21 @@ model Notification {
 
   @@index([userId])
   @@map("notifications")
+}
+
+// ─── Workflow 3 models ────────────────────────────────────────────────────────
+
+model Report {
+  id        Int      @id @default(autoincrement())
+  adminId   Int
+  title     String
+  filters   Json     @default("{}") // stores filter config used to generate the report
+  csvData   String?  @db.Text       // stores the raw CSV content
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("reports")
 }
