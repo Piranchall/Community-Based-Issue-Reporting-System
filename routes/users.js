@@ -33,19 +33,19 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login user
+// Login user — accepts email OR phone number as identifier
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, phone, password } = req.body;
+    const identifier = email || phone;  // accept either field name
 
-    // Validation
-    if (!email || !password) {
+    if (!identifier || !password) {
       return res.status(400).json({ 
-        error: 'Email and password are required' 
+        error: 'Email or phone, and password are required' 
       });
     }
 
-    const result = await userService.loginUser(email, password);
+    const result = await userService.loginUser(identifier, password);
 
     res.status(200).json({
       message: 'Login successful',
@@ -140,6 +140,60 @@ router.delete('/account', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+});
+
+// ── Citizen Notifications ──────────────────────────────────────────────────
+// Notifications are created automatically when an admin updates an issue
+// status. Citizens read them here using their own token.
+
+const notificationService = require('../services/notificationService');
+
+// GET /api/users/notifications — list all notifications for current citizen
+router.get('/notifications', authMiddleware, async (req, res) => {
+  try {
+    const notifications = await notificationService.listNotifications(req.user.userId);
+    res.status(200).json({
+      message: 'Notifications retrieved',
+      count: notifications.length,
+      data: notifications
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// GET /api/users/notifications/:id — single notification
+router.get('/notifications/:id', authMiddleware, async (req, res) => {
+  try {
+    const notification = await notificationService.getNotificationById(req.params.id);
+    // Make sure this notification belongs to the requesting citizen
+    if (notification.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    res.status(200).json({ message: 'Notification retrieved', data: notification });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// PUT /api/users/notifications/:id — mark as read
+router.put('/notifications/:id', authMiddleware, async (req, res) => {
+  try {
+    const notification = await notificationService.markRead(req.params.id, req.user.userId);
+    res.status(200).json({ message: 'Notification marked as read', data: notification });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/users/notifications/:id — delete a notification
+router.delete('/notifications/:id', authMiddleware, async (req, res) => {
+  try {
+    await notificationService.deleteNotification(req.params.id, req.user.userId);
+    res.status(200).json({ message: 'Notification deleted successfully' });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 

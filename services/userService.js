@@ -53,21 +53,30 @@ const registerUser = async (data) => {
   }
 };
 
-// Login user
-const loginUser = async (email, password) => {
+// Login user — accepts either email or phone as the identifier
+const loginUser = async (identifier, password) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { email }
+    if (!identifier || !password) {
+      throw new Error('Email/phone and password are required');
+    }
+
+    // Determine if identifier looks like an email or a phone number
+    const isEmail = identifier.includes('@');
+
+    const user = await prisma.user.findFirst({
+      where: isEmail
+        ? { email: identifier }
+        : { phone: identifier },
     });
 
     if (!user) {
-      throw new Error('Invalid email or password');
+      throw new Error('Invalid credentials');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      throw new Error('Invalid email or password');
+      throw new Error('Invalid credentials');
     }
 
     // Generate JWT token

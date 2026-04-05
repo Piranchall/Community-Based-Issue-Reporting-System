@@ -1,12 +1,17 @@
 const express = require('express');
 const router = express.Router();
+const path   = require('path');
 const issueService = require('../services/issueService');
 const authMiddleware = require('../middleware/authMiddleware');
+const upload = require('../middleware/upload');
 
 // Create a new issue (protected route)
-router.post('/', authMiddleware, async (req, res) => {
+// Accepts multipart/form-data with an optional `image` file field.
+// Also still accepts a JSON body with an `image` URL string (for API clients
+// that handle their own file hosting).
+router.post('/', authMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, category, latitude, longitude, address, image } = req.body;
+    const { title, description, category, latitude, longitude, address } = req.body;
 
     // Validation
     if (!title || !description || !category || latitude === undefined || longitude === undefined) {
@@ -15,14 +20,23 @@ router.post('/', authMiddleware, async (req, res) => {
       });
     }
 
+    // Image: prefer the uploaded file path; fall back to URL string from body
+    let imageValue = null;
+    if (req.file) {
+      // Build a relative URL that the frontend can use: /uploads/issues/<filename>
+      imageValue = `/uploads/issues/${req.file.filename}`;
+    } else if (req.body.image) {
+      imageValue = req.body.image;
+    }
+
     const issue = await issueService.createIssue({
       title,
       description,
       category,
-      latitude,
-      longitude,
+      latitude:  parseFloat(latitude),
+      longitude: parseFloat(longitude),
       address,
-      image,
+      image: imageValue,
       userId: req.user.userId
     });
 
@@ -31,19 +45,25 @@ router.post('/', authMiddleware, async (req, res) => {
       data: issue
     });
   } catch (error) {
+    // Multer errors (file size, wrong type) come through here too
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'Image must be 5 MB or smaller' });
+    }
     res.status(400).json({ error: error.message });
   }
 });
 
-// Get all issues
+// Get all issues — supports ?category, ?status, ?userId, ?area, ?sortBy=upvoteCount|priority
 router.get('/', async (req, res) => {
   try {
-    const { category, status, userId } = req.query;
+    const { category, status, userId, area, sortBy } = req.query;
 
     const filters = {};
     if (category) filters.category = category;
-    if (status) filters.status = status;
-    if (userId) filters.userId = userId;
+    if (status)   filters.status   = status;
+    if (userId)   filters.userId   = userId;
+    if (area)     filters.area     = area;
+    if (sortBy)   filters.sortBy   = sortBy; // 'upvoteCount' | 'createdAt'
 
     const issues = await issueService.getAllIssues(filters);
 
