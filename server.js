@@ -1,24 +1,18 @@
 require('dotenv').config();
 const express = require('express');
-const cors    = require('cors');
-const path    = require('path');
+const cors = require('cors');
 
-// Initialize Express app
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-// Serve uploaded issue images as static files
-// e.g. GET /uploads/issues/issue-1712001234567-839271234.jpg
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (_req, res) => {
   res.json({
-    message: 'CivicReport API — Workflow 1',
+    message: 'CivicReport Admin API — Workflow 2',
     version: '1.0.0',
-    endpoints: '/api/users, /api/issues, /api/upvotes, /api/comments',
+    endpoints: '/api/admin, /api/admin/issues, /api/status-logs, /api/notifications',
   });
 });
 
@@ -26,10 +20,10 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'Server is running', timestamp: new Date().toISOString() });
 });
 
-app.use('/api/users',    require('./routes/users'));
-app.use('/api/issues',   require('./routes/issues'));
-app.use('/api/upvotes',  require('./routes/upvotes'));
-app.use('/api/comments', require('./routes/comments'));
+app.use('/api/admin',         require('./routes/admin'));
+app.use('/api/admin/issues',  require('./routes/Adminissues'));
+app.use('/api/status-logs',   require('./routes/statusLogs'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'Route not found' });
@@ -43,7 +37,8 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
-  console.log(`[Workflow 1] Server running on port ${PORT}`);
+  console.log(`[Workflow 2] Admin API running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV}`);
 });

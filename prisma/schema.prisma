@@ -1,5 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Prisma schema — includes workflow-1 models + workflow-2 additions
 
 generator client {
   provider = "prisma-client-js"
@@ -10,42 +9,46 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Workflow 1 models ────────────────────────────────────────────────────────
+
 model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
-  phone     String     @unique
+  id        String    @id @default(cuid())
+  email     String    @unique
+  phone     String    @unique
   password  String
   firstName String?
   lastName  String?
   avatar    String?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  issues    Issue[]
-  upvotes   Upvote[]
-  comments  Comment[]
+  issues   Issue[]
+  upvotes  Upvote[]
+  comments Comment[]
 
   @@map("users")
 }
 
 model Issue {
-  id          String     @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
   description String
-  category    String     // "Garbage", "Water", "Electricity", "Road", etc.
-  status      String     @default("Pending") // "Pending", "In Progress", "Resolved", "Closed"
-  image       String?    // Image URL or file path
+  category    String
+  status      String   @default("Pending") // Pending | In Progress | Resolved | Rejected
+  image       String?
   latitude    Float
   longitude   Float
   address     String?
-  upvoteCount Int        @default(0)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  
-  userId      String
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  upvotes     Upvote[]
-  comments    Comment[]
+  upvoteCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  upvotes    Upvote[]
+  comments   Comment[]
+  statusLogs StatusLog[] // workflow-2 relation
 
   @@index([userId])
   @@index([category])
@@ -56,14 +59,14 @@ model Issue {
 model Upvote {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  issueId   String
-  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, issueId]) // Ensure one upvote per user per issue
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  issueId String
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, issueId])
   @@index([userId])
   @@index([issueId])
   @@map("upvotes")
@@ -74,14 +77,59 @@ model Comment {
   text      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  issueId   String
-  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  issueId String
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([issueId])
   @@map("comments")
+}
+
+// ─── Workflow 2 models ────────────────────────────────────────────────────────
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  statusLogs StatusLog[]
+
+  @@map("admins")
+}
+
+model StatusLog {
+  id        Int      @id @default(autoincrement())
+  issueId   String
+  adminId   Int
+  oldStatus String?
+  newStatus String
+  remarks   String?
+  changedAt DateTime @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  admin Admin @relation(fields: [adminId], references: [id])
+
+  @@index([issueId])
+  @@index([adminId])
+  @@map("status_logs")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  issueId   String?
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("notifications")
 }
