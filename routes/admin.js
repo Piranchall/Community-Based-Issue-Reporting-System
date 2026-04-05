@@ -1,6 +1,6 @@
-const express = require('express');
-const router = express.Router();
-const auth = require('../middleware/AdminauthMiddleware');
+const express      = require('express');
+const router       = express.Router();
+const auth         = require('../middleware/AdminauthMiddleware');
 const adminService = require('../services/adminService');
 
 // POST /api/admin/register
@@ -20,6 +20,28 @@ router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     const result = await adminService.loginAdmin({ email, password });
     res.status(200).json({ message: 'Login successful', data: result });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/forgot-password (public — no auth)
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const result = await adminService.forgotPasswordAdmin({ email });
+    res.status(200).json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/reset-password (public — no auth)
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, token, newPassword } = req.body;
+    const result = await adminService.resetPasswordAdmin({ email, token, newPassword });
+    res.status(200).json(result);
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }

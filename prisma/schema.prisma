@@ -12,15 +12,17 @@ datasource db {
 // ─── Workflow 1 models ────────────────────────────────────────────────────────
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  phone     String    @unique
-  password  String
-  firstName String?
-  lastName  String?
-  avatar    String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  email            String    @unique
+  phone            String    @unique
+  password         String
+  firstName        String?
+  lastName         String?
+  avatar           String?
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   issues   Issue[]
   upvotes  Upvote[]
@@ -48,7 +50,7 @@ model Issue {
 
   upvotes    Upvote[]
   comments   Comment[]
-  statusLogs StatusLog[] // workflow-2 relation
+  statusLogs StatusLog[]
 
   @@index([userId])
   @@index([category])
@@ -92,13 +94,15 @@ model Comment {
 // ─── Workflow 2 models ────────────────────────────────────────────────────────
 
 model Admin {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String?
-  role      String   @default("admin")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               Int       @id @default(autoincrement())
+  email            String    @unique
+  password         String
+  name             String?
+  role             String    @default("admin")
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   statusLogs StatusLog[]
 
