@@ -1,0 +1,1239 @@
+### ================================================================
+### CIVICREPORT — EXTENSIVE API TEST FILE
+### All 3 Workflows — Multiple Records — Full WF3 Coverage
+### ================================================================
+### Extension: REST Client by Huachao Mao (VS Code)
+###
+### INSTRUCTIONS:
+###   1. Start server: node server.js
+###   2. Run Section 0 first (setup tokens)
+###   3. Paste tokens at top after login
+###   4. Run Sections 1-2 to seed data (multiple issues + upvotes)
+###   5. Run Section 3 (admin status updates — needed for WF3 resolution time)
+###   6. Run Section 4 (full WF3 analytics tests)
+###   7. Run Section 5 (full WF3 reports CRUD tests)
+###   8. Run Section 6 (edge cases + error handling)
+### ================================================================
+
+@baseUrl       = http://localhost:5001
+@citizenToken  = PASTE_CITIZEN_TOKEN_HERE
+@citizen2Token = PASTE_CITIZEN2_TOKEN_HERE
+@adminToken    = PASTE_ADMIN_TOKEN_HERE
+@issueId1      = PASTE_ISSUE_ID_1
+@issueId2      = PASTE_ISSUE_ID_2
+@issueId3      = PASTE_ISSUE_ID_3
+@issueId4      = PASTE_ISSUE_ID_4
+@issueId5      = PASTE_ISSUE_ID_5
+@issueId6      = PASTE_ISSUE_ID_6
+@reportId      = PASTE_REPORT_ID_HERE
+
+
+### ================================================================
+### SECTION 0 — SETUP: Register & Login (run these first)
+### ================================================================
+
+### [0.1] Register Citizen 1
+POST {{baseUrl}}/api/users/register
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "phone": "+923001234567",
+  "password": "password123",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+
+###
+
+### [0.2] Register Citizen 2
+POST {{baseUrl}}/api/users/register
+Content-Type: application/json
+
+{
+  "email": "sara@example.com",
+  "phone": "+923009876543",
+  "password": "password123",
+  "firstName": "Sara",
+  "lastName": "Khan"
+}
+
+###
+
+### [0.3] Login Citizen 1 with EMAIL → copy token → paste into @citizenToken
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "password123"
+}
+
+###
+
+### [0.4] Login Citizen 1 with PHONE → should also return 200 (Fix 1 test)
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
+
+{
+  "phone": "+923001234567",
+  "password": "password123"
+}
+
+###
+
+### [0.5] Login Citizen 2 → copy token → paste into @citizen2Token
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
+
+{
+  "email": "sara@example.com",
+  "password": "password123"
+}
+
+###
+
+### [0.6] Register Admin
+POST {{baseUrl}}/api/admin/register
+Content-Type: application/json
+
+{
+  "email": "admin@civicreport.com",
+  "password": "admin123",
+  "name": "City Admin"
+}
+
+###
+
+### [0.7] Login Admin → copy token → paste into @adminToken
+POST {{baseUrl}}/api/admin/login
+Content-Type: application/json
+
+{
+  "email": "admin@civicreport.com",
+  "password": "admin123"
+}
+
+###
+
+### [0.8] Health check
+GET {{baseUrl}}/api/health
+
+###
+
+
+### ================================================================
+### SECTION 1 — SEED: Report 6 Issues (different categories & areas)
+### Copy each returned `id` into the @issueId variables at the top
+### ================================================================
+
+### [1.1] Issue 1 — Garbage / Downtown
+POST {{baseUrl}}/api/issues
+Authorization: Bearer {{citizenToken}}
+Content-Type: application/json
+
+{
+  "title": "Overflowing garbage bins on Main Street",
+  "description": "Three bins near the bus stop have been overflowing for 5 days. Smell is unbearable.",
+  "category": "Garbage",
+  "latitude": 24.8607,
+  "longitude": 67.0011,
+  "address": "Main Street, Downtown"
+}
+
+###
+
+### [1.2] Issue 2 — Garbage / Sector 4
+POST {{baseUrl}}/api/issues
+Authorization: Bearer {{citizenToken}}
+Content-Type: application/json
+
+{
+  "title": "Illegal dumping near park",
+  "description": "Large pile of construction waste dumped near children's park entrance",
+  "category": "Garbage",
+  "latitude": 24.8750,
+  "longitude": 67.0150,
+  "address": "Sector 4, North Block"
+}
+
+###
+
+### [1.3] Issue 3 — Road / Downtown
+POST {{baseUrl}}/api/issues
+Authorization: Bearer {{citizenToken}}
+Content-Type: application/json
+
+{
+  "title": "Large pothole causing accidents",
+  "description": "Deep pothole on main road near traffic signal. Two motorcycles fell this week.",
+  "category": "Road",
+  "latitude": 24.8620,
+  "longitude": 67.0025,
+  "address": "Main Street, Downtown"
+}
+
+###
+
+### [1.4] Issue 4 — Water / Sector 4
+POST {{baseUrl}}/api/issues
+Authorization: Bearer {{citizenToken}}
+Content-Type: application/json
+
+{
+  "title": "Water supply cut for 3 days",
+  "description": "Entire block has no water supply since Monday. No notice given by authority.",
+  "category": "Water",
+  "latitude": 24.8760,
+  "longitude": 67.0160,
+  "address": "Sector 4, North Block"
+}
+
+###
+
+### [1.5] Issue 5 — Electricity / Zone B
+POST {{baseUrl}}/api/issues
+Authorization: Bearer {{citizenToken}}
+Content-Type: application/json
+
+{
+  "title": "Street lights not working",
+  "description": "All street lights on the boulevard have been off for 2 weeks. Very unsafe at night.",
+  "category": "Electricity",
+  "latitude": 24.8690,
+  "longitude": 67.0080,
+  "address": "Zone B, Industrial Area"
+}
+
+###
+
+### [1.6] Issue 6 — Road / Zone B (reported by Citizen 2)
+POST {{baseUrl}}/api/issues
+Authorization: Bearer {{citizen2Token}}
+Content-Type: application/json
+
+{
+  "title": "Bridge railing completely broken",
+  "description": "The safety railing on the pedestrian bridge is broken. Dangerous for children.",
+  "category": "Road",
+  "latitude": 24.8700,
+  "longitude": 67.0090,
+  "address": "Zone B, Industrial Area"
+}
+
+###
+
+
+### ================================================================
+### SECTION 2 — SEED: Upvotes (multiple users upvoting multiple issues)
+### This seeds upvoteCount data which WF3 analytics uses
+### ================================================================
+
+### [2.1] Citizen 1 upvotes Issue 2
+POST {{baseUrl}}/api/upvotes
+Authorization: Bearer {{citizenToken}}
+Content-Type: application/json
+
+{ "issueId": "{{issueId2}}" }
+
+###
+
+### [2.2] Citizen 1 upvotes Issue 3
+POST {{baseUrl}}/api/upvotes
+Authorization: Bearer {{citizenToken}}
+Content-Type: application/json
+
+{ "issueId": "{{issueId3}}" }
+
+###
+
+### [2.3] Citizen 1 upvotes Issue 5
+POST {{baseUrl}}/api/upvotes
+Authorization: Bearer {{citizenToken}}
+Content-Type: application/json
+
+{ "issueId": "{{issueId5}}" }
+
+###
+
+### [2.4] Citizen 2 upvotes Issue 1
+POST {{baseUrl}}/api/upvotes
+Authorization: Bearer {{citizen2Token}}
+Content-Type: application/json
+
+{ "issueId": "{{issueId1}}" }
+
+###
+
+### [2.5] Citizen 2 upvotes Issue 3
+POST {{baseUrl}}/api/upvotes
+Authorization: Bearer {{citizen2Token}}
+Content-Type: application/json
+
+{ "issueId": "{{issueId3}}" }
+
+###
+
+### [2.6] Citizen 2 upvotes Issue 4
+POST {{baseUrl}}/api/upvotes
+Authorization: Bearer {{citizen2Token}}
+Content-Type: application/json
+
+{ "issueId": "{{issueId4}}" }
+
+###
+
+### [2.7] Verify — Issue 3 should have upvoteCount = 2 (highest priority)
+GET {{baseUrl}}/api/issues/{{issueId3}}
+
+###
+
+### [2.8] Get all issues sorted by priority — Issue 3 should be first
+GET {{baseUrl}}/api/issues?sortBy=upvoteCount
+
+###
+
+### [2.9] Filter issues by area — should return issues 1 and 3 only
+GET {{baseUrl}}/api/issues?area=Downtown
+
+###
+
+### [2.10] Filter by category
+GET {{baseUrl}}/api/issues?category=Garbage
+
+###
+
+
+### ================================================================
+### SECTION 3 — ADMIN: Status Updates
+### CRITICAL for WF3 — resolution time analytics needs resolved issues
+### ================================================================
+
+### [3.1] Admin views all issues
+GET {{baseUrl}}/api/admin/issues
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [3.2] Admin sorts by priority (upvoteCount)
+GET {{baseUrl}}/api/admin/issues?sortBy=upvoteCount
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [3.3] Admin filters by area
+GET {{baseUrl}}/api/admin/issues?area=Downtown
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [3.4] Admin filters by category + area
+GET {{baseUrl}}/api/admin/issues?category=Garbage&area=Sector+4
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [3.5] Admin filters by date range
+GET {{baseUrl}}/api/admin/issues?dateFrom=2026-01-01&dateTo=2026-12-31
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [3.6] Admin views Issue 1 full detail (image, upvotes, status logs)
+GET {{baseUrl}}/api/admin/issues/{{issueId1}}
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [3.7] Move Issue 1: Pending → In Progress
+PUT {{baseUrl}}/api/admin/issues/{{issueId1}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "In Progress",
+  "remarks": "Assigned to municipal waste team. Collection scheduled for tomorrow."
+}
+
+###
+
+### [3.8] Move Issue 1: In Progress → Resolved
+PUT {{baseUrl}}/api/admin/issues/{{issueId1}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "Resolved",
+  "remarks": "Garbage cleared and bins relocated. Issue fully resolved."
+}
+
+###
+
+### [3.9] Move Issue 2: Pending → In Progress
+PUT {{baseUrl}}/api/admin/issues/{{issueId2}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "In Progress",
+  "remarks": "Waste removal team dispatched to Sector 4."
+}
+
+###
+
+### [3.10] Move Issue 2: In Progress → Resolved
+PUT {{baseUrl}}/api/admin/issues/{{issueId2}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "Resolved",
+  "remarks": "Construction waste removed. Area cleaned."
+}
+
+###
+
+### [3.11] Move Issue 3: Pending → In Progress
+PUT {{baseUrl}}/api/admin/issues/{{issueId3}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "In Progress",
+  "remarks": "Road repair crew scheduled for this week."
+}
+
+###
+
+### [3.12] Move Issue 3: In Progress → Resolved
+PUT {{baseUrl}}/api/admin/issues/{{issueId3}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "Resolved",
+  "remarks": "Pothole filled and road surface repaired."
+}
+
+###
+
+### [3.13] Move Issue 5: Pending → Rejected
+PUT {{baseUrl}}/api/admin/issues/{{issueId5}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "Rejected",
+  "remarks": "This area falls under private company jurisdiction, not municipal authority."
+}
+
+###
+
+### [3.14] Issue 4 stays In Progress, Issue 6 stays Pending
+PUT {{baseUrl}}/api/admin/issues/{{issueId4}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "In Progress",
+  "remarks": "Water supply team investigating the pipeline break."
+}
+
+###
+
+### [3.15] Verify notifications fired — admin gets notified
+GET {{baseUrl}}/api/notifications
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [3.16] Get status log history for Issue 1 (should show 2 entries)
+GET {{baseUrl}}/api/status-logs/issue/{{issueId1}}
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [3.17] Get status log history for Issue 3 (should show 2 entries)
+GET {{baseUrl}}/api/status-logs/issue/{{issueId3}}
+Authorization: Bearer {{adminToken}}
+
+###
+
+
+### ================================================================
+### SECTION 4 — WORKFLOW 3: ANALYTICS (Extensive)
+### Run AFTER Section 3 so resolved issues exist for resolution time
+### ================================================================
+
+# ── 4A. Overview Stats ─────────────────────────────────────────────
+
+### [4.1] Overview — all issues, no filter
+### Expected: totalIssues=6, byStatus has Pending/InProgress/Resolved/Rejected, totalUpvotes=6
+GET {{baseUrl}}/api/analytics/overview
+
+###
+
+### [4.2] Overview — filter by status=Resolved
+### Expected: totalIssues=3 (issues 1,2,3), totalUpvotes reflects only resolved ones
+GET {{baseUrl}}/api/analytics/overview?status=Resolved
+
+###
+
+### [4.3] Overview — filter by category=Garbage
+### Expected: totalIssues=2 (issues 1,2)
+GET {{baseUrl}}/api/analytics/overview?category=Garbage
+
+###
+
+### [4.4] Overview — filter by area=Downtown
+### Expected: totalIssues=2 (issues 1,3)
+GET {{baseUrl}}/api/analytics/overview?area=Downtown
+
+###
+
+### [4.5] Overview — filter by date range (today)
+GET {{baseUrl}}/api/analytics/overview?dateFrom=2026-04-01&dateTo=2026-12-31
+
+###
+
+### [4.6] Overview — combined filters: category + area
+GET {{baseUrl}}/api/analytics/overview?category=Road&area=Downtown
+
+###
+
+# ── 4B. Category Breakdown (Bar Chart) ────────────────────────────
+
+### [4.7] By category — all issues
+### Expected: Garbage=2, Road=2, Water=1, Electricity=1
+GET {{baseUrl}}/api/analytics/by-category
+
+###
+
+### [4.8] By category — only Resolved issues
+### Expected: Garbage=2, Road=1
+GET {{baseUrl}}/api/analytics/by-category?status=Resolved
+
+###
+
+### [4.9] By category — filtered by area=Sector+4
+### Expected: Garbage=1, Water=1
+GET {{baseUrl}}/api/analytics/by-category?area=Sector+4
+
+###
+
+# ── 4C. Top Categories ─────────────────────────────────────────────
+
+### [4.10] Top 5 categories (default)
+### Expected: Garbage and Road tied at 2 each, Water and Electricity at 1
+GET {{baseUrl}}/api/analytics/top-categories
+
+###
+
+### [4.11] Top 3 categories only
+GET {{baseUrl}}/api/analytics/top-categories?limit=3
+
+###
+
+### [4.12] Top categories — Resolved only
+GET {{baseUrl}}/api/analytics/top-categories?status=Resolved
+
+###
+
+# ── 4D. Area / Location Breakdown ─────────────────────────────────
+
+### [4.13] By area — all issues
+### Expected: Downtown=2, Sector 4 North Block=2, Zone B Industrial Area=2
+GET {{baseUrl}}/api/analytics/by-area
+
+###
+
+### [4.14] By area — Garbage only
+### Expected: Downtown=1, Sector 4=1
+GET {{baseUrl}}/api/analytics/by-area?category=Garbage
+
+###
+
+### [4.15] By area — Resolved only
+### Expected: only areas with resolved issues appear
+GET {{baseUrl}}/api/analytics/by-area?status=Resolved
+
+###
+
+# ── 4E. Trend Line (Issues Over Time) ─────────────────────────────
+
+### [4.16] Trends — all time
+### Expected: array of {date, count} — all 6 issues grouped by day
+GET {{baseUrl}}/api/analytics/trends
+
+###
+
+### [4.17] Trends — with date range
+GET {{baseUrl}}/api/analytics/trends?dateFrom=2026-01-01&dateTo=2026-12-31
+
+###
+
+### [4.18] Trends — Garbage category only
+### Expected: only days when Garbage issues were reported
+GET {{baseUrl}}/api/analytics/trends?category=Garbage
+
+###
+
+### [4.19] Trends — filtered by area
+GET {{baseUrl}}/api/analytics/trends?area=Downtown
+
+###
+
+# ── 4F. Category Summary Panel ────────────────────────────────────
+
+### [4.20] Category summary — Garbage
+### Expected: totalInCategory=2, percentOfAllIssues=33.3%
+### avgResolutionDays for Garbage issues, mostAffectedArea
+GET {{baseUrl}}/api/analytics/category-summary?category=Garbage
+
+###
+
+### [4.21] Category summary — Road
+### Expected: totalInCategory=2, percentOfAllIssues=33.3%
+GET {{baseUrl}}/api/analytics/category-summary?category=Road
+
+###
+
+### [4.22] Category summary — Water
+GET {{baseUrl}}/api/analytics/category-summary?category=Water
+
+###
+
+### [4.23] Category summary — Electricity
+GET {{baseUrl}}/api/analytics/category-summary?category=Electricity
+
+###
+
+### [4.24] Category summary — Garbage + area filter
+GET {{baseUrl}}/api/analytics/category-summary?category=Garbage&area=Downtown
+
+###
+
+### [4.25] Category summary — missing ?category → should return 400
+GET {{baseUrl}}/api/analytics/category-summary
+
+###
+
+# ── 4G. Resolution Time (Admin Only) ──────────────────────────────
+
+### [4.26] Overall resolution time — all resolved issues
+### Expected: avgResolutionDays calculated from issues 1,2,3 (all resolved)
+### resolvedCount=3
+GET {{baseUrl}}/api/analytics/resolution-time
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.27] Resolution time — Garbage only
+### Expected: avgResolutionDays for issues 1 and 2, resolvedCount=2
+GET {{baseUrl}}/api/analytics/resolution-time?category=Garbage
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.28] Resolution time — Road only
+### Expected: avgResolutionDays for issue 3 only, resolvedCount=1
+GET {{baseUrl}}/api/analytics/resolution-time?category=Road
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.29] Resolution time — Water (no resolved Water issues)
+### Expected: avgResolutionHours=null, avgResolutionDays=null, resolvedCount=0
+GET {{baseUrl}}/api/analytics/resolution-time?category=Water
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.30] Resolution time — no token → should return 401
+GET {{baseUrl}}/api/analytics/resolution-time
+
+###
+
+# ── 4H. Resolution Time By Category (Admin Only) ──────────────────
+
+### [4.31] Resolution time by category — all
+### Expected: byCategory array with Garbage and Road entries + overallAvgDays
+GET {{baseUrl}}/api/analytics/resolution-time-by-category
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.32] Resolution time by category — date filtered
+GET {{baseUrl}}/api/analytics/resolution-time-by-category?dateFrom=2026-01-01
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.33] No token → should return 401
+GET {{baseUrl}}/api/analytics/resolution-time-by-category
+
+###
+
+# ── 4I. CSV Export (Admin Only) ───────────────────────────────────
+
+### [4.34] Export all columns — all issues
+### Expected: CSV with 7 columns, 6 data rows
+GET {{baseUrl}}/api/analytics/export
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.35] Export — Resolved issues only
+### Expected: 3 rows (issues 1, 2, 3) with resolutionDate filled
+GET {{baseUrl}}/api/analytics/export?status=Resolved
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.36] Export — Garbage category only
+GET {{baseUrl}}/api/analytics/export?category=Garbage
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.37] Export — Downtown area only
+GET {{baseUrl}}/api/analytics/export?area=Downtown
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.38] Export — custom columns (3 columns only)
+### Expected: CSV with only Issue ID, Status, Report Date columns
+GET {{baseUrl}}/api/analytics/export?columns=issueId,status,reportDate
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.39] Export — all 7 columns explicitly
+GET {{baseUrl}}/api/analytics/export?columns=issueId,category,locationArea,status,reportDate,resolutionDate,upvoteCount
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.40] Export — invalid column name → should return 400
+GET {{baseUrl}}/api/analytics/export?columns=issueId,invalidColumn
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [4.41] Export — no token → should return 401
+GET {{baseUrl}}/api/analytics/export
+
+###
+
+
+### ================================================================
+### SECTION 5 — WORKFLOW 3: REPORTS CRUD (Extensive)
+### ================================================================
+
+# ── 5A. CREATE Reports ────────────────────────────────────────────
+
+### [5.1] Create Report 1 — all issues, no filters
+### Copy the returned `id` → paste into @reportId at the top
+POST {{baseUrl}}/api/reports
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Full System Snapshot — All Issues",
+  "filters": {}
+}
+
+###
+
+### [5.2] Create Report 2 — Garbage category only
+POST {{baseUrl}}/api/reports
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Garbage Issues Report",
+  "filters": {
+    "category": "Garbage"
+  }
+}
+
+###
+
+### [5.3] Create Report 3 — Resolved issues only
+POST {{baseUrl}}/api/reports
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Resolved Issues — Q2 2026",
+  "filters": {
+    "status": "Resolved",
+    "dateFrom": "2026-04-01",
+    "dateTo": "2026-06-30"
+  }
+}
+
+###
+
+### [5.4] Create Report 4 — Downtown area
+POST {{baseUrl}}/api/reports
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Downtown Area Issues",
+  "filters": {
+    "area": "Downtown"
+  }
+}
+
+###
+
+### [5.5] Create Report — missing title → should return 400
+POST {{baseUrl}}/api/reports
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "filters": { "category": "Road" }
+}
+
+###
+
+### [5.6] Create Report — no token → should return 401
+POST {{baseUrl}}/api/reports
+Content-Type: application/json
+
+{
+  "title": "Unauthorized Report",
+  "filters": {}
+}
+
+###
+
+# ── 5B. LIST Reports ──────────────────────────────────────────────
+
+### [5.7] List all reports — should show 4 reports, NO csvData in list
+GET {{baseUrl}}/api/reports
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [5.8] List — no token → should return 401
+GET {{baseUrl}}/api/reports
+
+###
+
+# ── 5C. READ Single Report ────────────────────────────────────────
+
+### [5.9] Get Report 1 by ID — should include full csvData
+GET {{baseUrl}}/api/reports/{{reportId}}
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [5.10] Get non-existent report → should return 404
+GET {{baseUrl}}/api/reports/99999
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [5.11] Get report — no token → should return 401
+GET {{baseUrl}}/api/reports/{{reportId}}
+
+###
+
+# ── 5D. DOWNLOAD Report CSV ───────────────────────────────────────
+
+### [5.12] Download Report 1 as CSV file
+### Expected: file download with Content-Disposition header
+GET {{baseUrl}}/api/reports/{{reportId}}/download
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [5.13] Download non-existent report → should return 404
+GET {{baseUrl}}/api/reports/99999/download
+Authorization: Bearer {{adminToken}}
+
+###
+
+# ── 5E. UPDATE Reports ────────────────────────────────────────────
+
+### [5.14] Update title only
+PUT {{baseUrl}}/api/reports/{{reportId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Full System Snapshot — UPDATED TITLE"
+}
+
+###
+
+### [5.15] Update filters only (no regenerate)
+PUT {{baseUrl}}/api/reports/{{reportId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "filters": { "category": "Road", "status": "Resolved" }
+}
+
+###
+
+### [5.16] Regenerate CSV with new filters
+### Expected: csvData refreshed with Road+Resolved filter applied
+PUT {{baseUrl}}/api/reports/{{reportId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Road Resolved Issues — Regenerated",
+  "filters": { "category": "Road", "status": "Resolved" },
+  "regenerate": true
+}
+
+###
+
+### [5.17] Update with nothing → should return 400
+PUT {{baseUrl}}/api/reports/{{reportId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+### [5.18] Update non-existent report → should return 404
+PUT {{baseUrl}}/api/reports/99999
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "Ghost Report"
+}
+
+###
+
+### [5.19] Update — no token → should return 401
+PUT {{baseUrl}}/api/reports/{{reportId}}
+Content-Type: application/json
+
+{
+  "title": "Unauthorized Update"
+}
+
+###
+
+# ── 5F. DELETE Reports ────────────────────────────────────────────
+
+### [5.20] Delete Report 2 (Garbage report)
+DELETE {{baseUrl}}/api/reports/2
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [5.21] Verify deletion — list should now show 3 reports
+GET {{baseUrl}}/api/reports
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [5.22] Delete non-existent report → should return 404
+DELETE {{baseUrl}}/api/reports/99999
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [5.23] Delete — no token → should return 401
+DELETE {{baseUrl}}/api/reports/{{reportId}}
+
+###
+
+
+### ================================================================
+### SECTION 6 — EDGE CASES & ERROR HANDLING
+### ================================================================
+
+### [6.1] Login with wrong password → should return 401
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
+
+{
+  "email": "john@example.com",
+  "password": "wrongpassword"
+}
+
+###
+
+### [6.2] Login with non-existent email → should return 401
+POST {{baseUrl}}/api/users/login
+Content-Type: application/json
+
+{
+  "email": "ghost@example.com",
+  "password": "password123"
+}
+
+###
+
+### [6.3] Report issue without token → should return 401
+POST {{baseUrl}}/api/issues
+Content-Type: application/json
+
+{
+  "title": "Unauthorized issue",
+  "description": "This should fail",
+  "category": "Garbage",
+  "latitude": 24.8607,
+  "longitude": 67.0011
+}
+
+###
+
+### [6.4] Report issue missing required fields → should return 400
+POST {{baseUrl}}/api/issues
+Authorization: Bearer {{citizenToken}}
+Content-Type: application/json
+
+{
+  "title": "Missing fields issue"
+}
+
+###
+
+### [6.5] Upvote same issue twice → should return 400 (already upvoted)
+POST {{baseUrl}}/api/upvotes
+Authorization: Bearer {{citizenToken}}
+Content-Type: application/json
+
+{ "issueId": "{{issueId2}}" }
+
+###
+
+### [6.6] Admin update with invalid status → should return 400
+PUT {{baseUrl}}/api/admin/issues/{{issueId6}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "Closed"
+}
+
+###
+
+### [6.7] Admin update non-existent issue → should return 404
+PUT {{baseUrl}}/api/admin/issues/nonexistentid123
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "Resolved",
+  "remarks": "This should fail"
+}
+
+###
+
+### [6.8] Citizen token used on admin route → should return 403
+GET {{baseUrl}}/api/admin/issues
+Authorization: Bearer {{citizenToken}}
+
+###
+
+### [6.9] Get issue with invalid ID → should return 404
+GET {{baseUrl}}/api/issues/nonexistentid123
+
+###
+
+### [6.10] Category summary without ?category → should return 400
+GET {{baseUrl}}/api/analytics/category-summary
+
+###
+
+### [6.11] Analytics overview — no issues match filter → should return 200 with zeros
+GET {{baseUrl}}/api/analytics/overview?category=Other
+
+###
+
+### [6.12] Nearby issues — missing lat/lng → should return 400
+GET {{baseUrl}}/api/issues/nearby
+
+###
+
+### [6.13] Nearby issues — valid coordinates
+GET {{baseUrl}}/api/issues/nearby?latitude=24.8607&longitude=67.0011&radius=10
+
+###
+
+### [6.14] Export with citizen token → should return 403
+GET {{baseUrl}}/api/analytics/export
+Authorization: Bearer {{citizenToken}}
+
+###
+
+### ================================================================
+### SECTION 7 — LOCATION DENSITY PRIORITY SCORE
+### Run AFTER Section 1 (issues seeded) and Section 2 (upvotes seeded)
+### Issues 1 and 3 are both in "Downtown" close coordinates — they
+### should boost each other's nearbyIssueCount and priorityScore
+### ================================================================
+
+### [7.1] Get issues sorted by PRIORITY (upvotes + location density)
+### Expected: each issue has priorityScore and nearbyIssueCount fields
+### Issue 3 (2 upvotes + nearby Issue 1) should rank higher than
+### Issue 1 (1 upvote + nearby Issue 3)
+GET {{baseUrl}}/api/issues?sortBy=priority
+
+###
+
+### [7.2] Compare — same issues sorted by upvoteCount only
+### Notice the order may differ from priority sort above
+GET {{baseUrl}}/api/issues?sortBy=upvoteCount
+
+###
+
+### [7.3] Compare — default sort (newest first, no priority)
+GET {{baseUrl}}/api/issues
+
+###
+
+### [7.4] Priority sort + category filter
+### Expected: only Garbage issues, sorted by priorityScore
+GET {{baseUrl}}/api/issues?sortBy=priority&category=Garbage
+
+###
+
+### [7.5] Priority sort + area filter
+### Expected: only Downtown issues (1 and 3), both have nearbyIssueCount=1
+### priorityScore = upvoteCount + (1 × 2) for each
+GET {{baseUrl}}/api/issues?sortBy=priority&area=Downtown
+
+###
+
+### [7.6] Priority sort + status filter
+### Expected: only Pending issues sorted by score
+GET {{baseUrl}}/api/issues?sortBy=priority&status=Pending
+
+###
+
+### [7.7] Verify priorityScore values make sense
+### Issue 1: 1 upvote + 1 nearby = 1 + (1×2) = 3
+### Issue 3: 2 upvotes + 1 nearby = 2 + (1×2) = 4  ← should rank first
+### Issue 2: 1 upvote + 0 nearby = 1 + (0×2) = 1
+### Issue 4: 1 upvote + 0 nearby = 1
+### Issue 5: 1 upvote + 1 nearby (Issue 6 also Zone B) = 1 + 2 = 3
+### Issue 6: 0 upvotes + 1 nearby = 0 + 2 = 2
+GET {{baseUrl}}/api/issues?sortBy=priority
+
+###
+
+### [7.8] Admin also sees priority sort
+GET {{baseUrl}}/api/admin/issues?sortBy=upvoteCount
+Authorization: Bearer {{adminToken}}
+
+###
+
+
+### ================================================================
+### SECTION 8 — CITIZEN NOTIFICATIONS
+### Run AFTER Section 3 (admin status updates) because notifications
+### are created automatically when admin changes issue status
+### ================================================================
+
+### [8.1] Citizen 1 gets their notifications
+### Expected: notifications for Issue 1 (Resolved) and Issue 3 (Resolved)
+### because Citizen 1 reported Issue 1 and upvoted Issue 3
+GET {{baseUrl}}/api/users/notifications
+Authorization: Bearer {{citizenToken}}
+
+###
+
+### [8.2] Citizen 2 gets their notifications
+### Expected: notifications for Issue 6 (reporter) and upvoted issues
+GET {{baseUrl}}/api/users/notifications
+Authorization: Bearer {{citizen2Token}}
+
+###
+
+### [8.3] Get single notification by ID
+### Copy a notification id from [8.1] response and paste below
+GET {{baseUrl}}/api/users/notifications/PASTE_NOTIFICATION_ID
+Authorization: Bearer {{citizenToken}}
+
+###
+
+### [8.4] Get notification that belongs to different citizen → should return 403
+### Use Citizen 2 token to try accessing Citizen 1's notification
+GET {{baseUrl}}/api/users/notifications/PASTE_CITIZEN1_NOTIFICATION_ID
+Authorization: Bearer {{citizen2Token}}
+
+###
+
+### [8.5] Mark notification as read
+### Expected: isRead changes from false to true
+PUT {{baseUrl}}/api/users/notifications/PASTE_NOTIFICATION_ID
+Authorization: Bearer {{citizenToken}}
+
+###
+
+### [8.6] Verify notification is now marked read
+GET {{baseUrl}}/api/users/notifications/PASTE_NOTIFICATION_ID
+Authorization: Bearer {{citizenToken}}
+
+###
+
+### [8.7] List notifications again — isRead should be true for that one
+GET {{baseUrl}}/api/users/notifications
+Authorization: Bearer {{citizenToken}}
+
+###
+
+### [8.8] Delete a notification
+DELETE {{baseUrl}}/api/users/notifications/PASTE_NOTIFICATION_ID
+Authorization: Bearer {{citizenToken}}
+
+###
+
+### [8.9] Verify deletion — should return 404 now
+GET {{baseUrl}}/api/users/notifications/PASTE_NOTIFICATION_ID
+Authorization: Bearer {{citizenToken}}
+
+###
+
+### [8.10] Try to delete notification belonging to different citizen → should return 403
+DELETE {{baseUrl}}/api/users/notifications/PASTE_CITIZEN2_NOTIFICATION_ID
+Authorization: Bearer {{citizenToken}}
+
+###
+
+### [8.11] No token → should return 401
+GET {{baseUrl}}/api/users/notifications
+
+###
+
+### [8.12] Admin token used on citizen notification route → should return 401
+### Admin token has role=admin, citizen middleware checks req.user not req.admin
+GET {{baseUrl}}/api/users/notifications
+Authorization: Bearer {{adminToken}}
+
+###
+
+### [8.13] Trigger more notifications — resolve another issue and check citizen inbox
+PUT {{baseUrl}}/api/admin/issues/{{issueId6}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "newStatus": "Resolved",
+  "remarks": "Bridge railing repaired and safety tested."
+}
+
+###
+
+### [8.14] Citizen 2 checks notifications — should now have a new one for Issue 6
+GET {{baseUrl}}/api/users/notifications
+Authorization: Bearer {{citizen2Token}}
+
+###
