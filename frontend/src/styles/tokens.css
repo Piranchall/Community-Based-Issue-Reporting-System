@@ -1,0 +1,103 @@
+/* ── CivicReport design tokens ──────────────────────────────────────── */
+
+:root {
+  /* Surfaces */
+  --ink-950: #060B18;
+  --ink-900: #0B1223;
+  --ink-850: #0E1629;
+  --ink-800: #121B33;
+  --ink-750: #17203B;
+  --ink-700: #1D2845;
+  --ink-600: #2A3759;
+  --ink-500: #6B7A99;
+  --ink-400: #8C99B8;
+  --ink-300: #B4BECF;
+  --ink-200: #D5DCEA;
+  --ink-100: #E8ECF4;
+
+  --paper:    #F5F6FA;
+  --paper-2:  #EDEFF6;
+  --white:    #FFFFFF;
+
+  /* Accents */
+  --electric:        #3E7BFA;
+  --electric-bright: #5E9CFF;
+  --electric-deep:   #2A5BD1;
+  --electric-glow:   rgba(62, 123, 250, 0.35);
+
+  --lime:    #C9F23E;
+  --lime-2:  #A8D61F;
+
+  /* Status */
+  --status-pending:    #F5A524;
+  --status-progress:   #5E9CFF;
+  --status-resolved:   #22C55E;
+  --status-rejected:   #EF4444;
+
+  /* Category dots */
+  --cat-garbage:     #F59E0B;
+  --cat-water:       #38BDF8;
+  --cat-electricity: #C9F23E;
+  --cat-road:        #A78BFA;
+  --cat-other:       #F472B6;
+
+  /* Strokes */
+  --stroke-soft:     rgba(255,255,255,0.06);
+  --stroke-strong:   rgba(255,255,255,0.12);
+  --stroke-paper:    rgba(11,18,35,0.08);
+
+  /* Shadow */
+  --shadow-card: 0 1px 0 0 rgba(255,255,255,0.04) inset,
+                 0 1px 2px rgba(0,0,0,0.4),
+                 0 12px 32px -8px rgba(0,0,0,0.5);
+  --shadow-pop:  0 20px 60px -12px rgba(0,0,0,0.6),
+                 0 8px 24px -8px rgba(62,123,250,0.25);
+  --shadow-auth: 0 30px 80px -20px rgba(6,11,24,0.5);
+
+  /* Radii */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* Type */
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root[data-theme="light"] {
+  --ink-950: #F3F6FD;
+  --ink-900: #FFFFFF;
+  --ink-850: #F8FAFF;
+  --ink-800: #EEF3FF;
+  --ink-750: #E6ECFA;
+  --ink-700: #DDE6F7;
+  --ink-600: #B7C2DA;
+  --ink-500: #64708A;
+  --ink-400: #49556F;
+  --ink-300: #2D3852;
+  --ink-200: #1F2940;
+  --ink-100: #121A2E;
+
+  --paper: #FFFFFF;
+  --paper-2: #F2F6FF;
+  --white: #0D152B;
+
+  --stroke-soft: rgba(12, 26, 56, 0.09);
+  --stroke-strong: rgba(12, 26, 56, 0.18);
+  --stroke-paper: rgba(11, 18, 35, 0.1);
+
+  --electric-glow: rgba(62, 123, 250, 0.22);
+
+  --shadow-card: 0 1px 0 0 rgba(255,255,255,0.8) inset,
+                 0 1px 2px rgba(11,18,35,0.07),
+                 0 12px 32px -12px rgba(11,18,35,0.18);
+  --shadow-pop:  0 20px 60px -20px rgba(11,18,35,0.25),
+                 0 8px 24px -10px rgba(62,123,250,0.2);
+  --shadow-auth: 0 30px 80px -28px rgba(11,18,35,0.3);
+}
