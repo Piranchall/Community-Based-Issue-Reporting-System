@@ -132,3 +132,47 @@ export const Notifications = {
   remove: (id) => request(`/notifications/${id}`, { method: 'DELETE' }),
 };
 
+// ─── Analytics (WF3) ────────────────────────────────────────────────────────
+export const isAdmin = () => !!localStorage.getItem('adminToken');
+
+const qs = (params = {}) => {
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
+  if (entries.length === 0) return '';
+  const sp = new URLSearchParams();
+  for (const [k, v] of entries) sp.set(k, v);
+  return `?${sp.toString()}`;
+};
+
+export const analytics = {
+  overview:                 (filters) => request(`/analytics/overview${qs(filters)}`),
+  byCategory:               (filters) => request(`/analytics/by-category${qs(filters)}`),
+  topCategories:            (filters) => request(`/analytics/top-categories${qs(filters)}`),
+  byArea:                   (filters) => request(`/analytics/by-area${qs(filters)}`),
+  trends:                   (filters) => request(`/analytics/trends${qs(filters)}`),
+  categorySummary:          (filters) => request(`/analytics/category-summary${qs(filters)}`),
+  resolutionTime:           (filters) => request(`/analytics/resolution-time${qs(filters)}`),
+  resolutionTimeByCategory: (filters) => request(`/analytics/resolution-time-by-category${qs(filters)}`),
+  exportCsv: async (filters, columns) => {
+    const params = { ...filters };
+    if (columns?.length) params.columns = columns.join(',');
+    return request(`/analytics/export${qs(params)}`);
+  },
+};
+
+export function downloadCsv(csvString, filename = 'export.csv') {
+  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+export function dateRangeToFilters(range) {
+  if (range === 'all') return {};
+  const days = { '7d': 7, '30d': 30, '90d': 90 }[range];
+  if (!days) return {};
+  const to = new Date(), from = new Date();
+  from.setDate(from.getDate() - days);
+  return { dateFrom: from.toISOString().slice(0, 10), dateTo: to.toISOString().slice(0, 10) };
+}

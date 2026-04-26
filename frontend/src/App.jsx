@@ -1,5 +1,9 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+// Add these imports at the top with WF3 pages
+import AnalyticsOverview from './pages/AnalyticsOverview';
+import FilteredAnalytics from './pages/FilteredAnalytics';
+import MapView from './pages/MapView';
 
 // WF1 — Citizen pages
 import Login from "./pages/Login";
@@ -81,6 +85,11 @@ export default function App() {
         <Route path="/admin/status-logs" element={<ProtectedRoute><StatusLogs /></ProtectedRoute>} />
         <Route path="/admin/notifications" element={<ProtectedRoute><AdminNotifications /></ProtectedRoute>} />
         <Route path="/admin/team" element={<ProtectedRoute><CreateAdmin /></ProtectedRoute>} />
+
+        {/* WF3 — Analytics routes */}
+        <Route path="/analytics" element={<AnalyticsOverview />} />
+        <Route path="/analytics/filtered" element={<FilteredAnalytics />} />
+        <Route path="/map" element={<ProtectedRoute><MapView /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );
