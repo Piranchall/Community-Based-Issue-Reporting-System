@@ -84,6 +84,10 @@ CREATE INDEX "comments_userId_idx" ON "comments"("userId");
 -- CreateIndex
 CREATE INDEX "comments_issueId_idx" ON "comments"("issueId");
 
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN     "resetToken" TEXT,
+ADD COLUMN     "resetTokenExpiry" TIMESTAMP(3);
+
 -- AddForeignKey
 ALTER TABLE "issues" ADD CONSTRAINT "issues_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

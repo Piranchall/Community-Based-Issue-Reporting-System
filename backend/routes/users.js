@@ -173,6 +173,16 @@ router.delete('/account', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/users/:userId/public
+router.get('/:userId/public', authMiddleware, async (req, res) => {
+  try {
+    const profile = await userService.getPublicUserProfile(req.params.userId, req.user.userId);
+    res.status(200).json({ message: 'Public profile fetched successfully', data: profile });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // ── This must come LAST — catches /:userId ────────────────────────────────────
 
 // GET /api/users/:userId

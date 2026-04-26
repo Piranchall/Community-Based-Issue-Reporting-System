@@ -112,7 +112,12 @@ const getUserById = async (userId) => {
         lastName: true,
         avatar: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        _count: {
+          select: {
+            issues: true
+          }
+        }
       }
     });
 
@@ -273,10 +278,120 @@ const resetPassword = async (email, token, newPassword) => {
   }
 };
 
+// Public profile with activity summary
+const getPublicUserProfile = async (userId, viewerUserId) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        avatar: true,
+        createdAt: true,
+        _count: {
+          select: {
+            issues: true,
+            upvotes: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const [uploadedIssues, upvotedIssues] = await Promise.all([
+      prisma.issue.findMany({
+        where: { userId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatar: true
+            }
+          },
+          _count: {
+            select: {
+              upvotes: true,
+              comments: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.upvote.findMany({
+        where: { userId },
+        include: {
+          issue: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  avatar: true
+                }
+              },
+              _count: {
+                select: {
+                  upvotes: true,
+                  comments: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    ]);
+
+    const uniqueUpvotedIssues = Array.from(new Map(
+      upvotedIssues.map((u) => [u.issue.id, u.issue])
+    ).values());
+
+    let viewerUpvotedIssueIds = new Set();
+    if (viewerUserId) {
+      const allIssueIds = [
+        ...uploadedIssues.map((i) => i.id),
+        ...uniqueUpvotedIssues.map((i) => i.id)
+      ];
+      if (allIssueIds.length) {
+        const viewerUpvotes = await prisma.upvote.findMany({
+          where: {
+            userId: viewerUserId,
+            issueId: { in: allIssueIds }
+          },
+          select: { issueId: true }
+        });
+        viewerUpvotedIssueIds = new Set(viewerUpvotes.map((u) => u.issueId));
+      }
+    }
+
+    const attachFlags = (issue) => ({
+      ...issue,
+      commentCount: issue._count?.comments ?? 0,
+      hasUpvoted: viewerUpvotedIssueIds.has(issue.id)
+    });
+
+    return {
+      user,
+      uploadedIssues: uploadedIssues.map(attachFlags),
+      upvotedIssues: uniqueUpvotedIssues.map(attachFlags)
+    };
+  } catch (error) {
+    throw new Error(`Failed to fetch public profile: ${error.message}`);
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getUserById,
+  getPublicUserProfile,
   updateUserProfile,
   changePassword,
   deleteUserAccount,
