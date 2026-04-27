@@ -109,7 +109,7 @@ The system is built across three integrated workflows:
 ```bash
 git clone https://github.com/Piranchall/Community-Based-Issue-Reporting-System.git
 cd Community-Based-Issue-Reporting-System
-git checkout merge-workflows
+git checkout main
 ```
 
 ### 2. Install backend dependencies
