@@ -2,13 +2,13 @@ const prisma = require('../db/connection');
 
 async function createNotification({ userId, issueId, message }) {
   return prisma.notification.create({
-    data: { userId, issueId: issueId || null, message },
+    data: { userId: String(userId), issueId: issueId || null, message },
   });
 }
 
 async function listNotifications(userId) {
   return prisma.notification.findMany({
-    where: { userId },
+    where: { userId: String(userId) },
     orderBy: { createdAt: 'desc' },
   });
 }
@@ -34,7 +34,7 @@ async function markRead(id, userId) {
     err.status = 404;
     throw err;
   }
-  if (notification.userId !== userId) {
+  if (String(notification.userId) !== String(userId)) {
     const err = new Error('Access denied');
     err.status = 403;
     throw err;
@@ -55,7 +55,7 @@ async function deleteNotification(id, userId) {
     err.status = 404;
     throw err;
   }
-  if (notification.userId !== userId) {
+  if (String(notification.userId) !== String(userId)) {
     const err = new Error('Access denied');
     err.status = 403;
     throw err;

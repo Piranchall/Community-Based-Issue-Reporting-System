@@ -255,6 +255,7 @@ const Dashboard = () => {
 
   const mapCenterLat = Number.isFinite(locationData?.latitude) ? locationData.latitude : DEFAULT_CENTER.latitude;
   const mapCenterLon = Number.isFinite(locationData?.longitude) ? locationData.longitude : DEFAULT_CENTER.longitude;
+  const mapCoordText = `${Number(mapCenterLat).toFixed(4)}° N, ${Number(mapCenterLon).toFixed(4)}° W`;
   const areaLabel = locationData?.area?.trim()
     ? locationData.area.trim().toUpperCase()
     : (Number.isFinite(locationData?.latitude) && Number.isFinite(locationData?.longitude)
@@ -561,10 +562,16 @@ const Dashboard = () => {
                   }))}
                 centerLat={mapCenterLat}
                 centerLon={mapCenterLon}
+                showOverlayCoords={false}
               />
               <div style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-500)" }}>
-                  {issues.length} ACTIVE · 1.2km RADIUS
+                <div style={{ display: "grid", gap: 2 }}>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-500)" }}>
+                    {issues.length} ACTIVE · 1.2km RADIUS
+                  </div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-500)" }}>
+                    {mapCoordText}
+                  </div>
                 </div>
                 <button type="button" className="link" onClick={openMap}>
                   Open map <Icon name="arrowRight" size={12}/>

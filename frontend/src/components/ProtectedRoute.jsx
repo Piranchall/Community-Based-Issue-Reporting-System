@@ -3,5 +3,5 @@ import { Navigate } from 'react-router-dom';
 import { isAuthed } from '../lib/auth';
 
 export default function ProtectedRoute({ children }) {
-  return isAuthed() ? children : <Navigate to="/admin/login" replace />;
+  return isAuthed() ? children : <Navigate to="/login" replace />;
 }

@@ -3,33 +3,35 @@ import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Icon from "./Icons";
 import { applyTheme, getSystemTheme, readThemeMode, THEME_MODE_KEY } from "../lib/theme";
+import { ROLE, clearSession, getSession } from "../lib/auth";
+import { api } from "../lib/api";
 
 const SIDEBAR_COLLAPSED_KEY = "cr_sidebar_collapsed";
 const THEME_MODES = ["light", "dark", "system"];
 
-const getUserFromStorage = () => {
-  try {
-    const raw = localStorage.getItem("userData");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
-  }
-};
-
-const getDisplayUser = (user) => {
+const getDisplayUser = (user, isAdmin = false) => {
+  const adminName = (user?.name || "").trim();
   const firstName = (user?.firstName || "").trim();
   const lastName = (user?.lastName || "").trim();
   const fullName = `${firstName} ${lastName}`.trim();
   const email = (user?.email || "").trim();
-  const fallbackName = email ? email.split("@")[0] : "Community User";
-  const name = fullName || fallbackName;
+  const fallbackName = email ? email.split("@")[0] : (isAdmin ? "Admin User" : "Community User");
+  const name = adminName || fullName || fallbackName;
   const initials = `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase() || (name[0] || "U").toUpperCase();
   return { name, email: email || "No email", initials };
 };
 
-const Sidebar = ({ unreadCount = 0, myIssuesCount = 0 }) => {
+const readSidebarIdentity = () => {
+  const session = getSession();
+  const isAdmin = session?.role === ROLE.ADMIN;
+  const principal = session?.principal || null;
+  return {
+    isAdmin,
+    userInfo: getDisplayUser(principal, isAdmin),
+  };
+};
+
+const Sidebar = ({ unreadCount = 0, myIssuesCount = 0, counts = {} }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const themeWrapRef = React.useRef(null);
@@ -43,7 +45,11 @@ const Sidebar = ({ unreadCount = 0, myIssuesCount = 0 }) => {
   const [themeMode, setThemeMode] = React.useState(() => readThemeMode());
   const [systemTheme, setSystemTheme] = React.useState(() => getSystemTheme());
   const [themeOpen, setThemeOpen] = React.useState(false);
-  const [userInfo, setUserInfo] = React.useState(() => getDisplayUser(getUserFromStorage()));
+  const [identity, setIdentity] = React.useState(readSidebarIdentity);
+  const [liveUnreadCount, setLiveUnreadCount] = React.useState(unreadCount);
+
+  const isAdmin = identity.isAdmin;
+  const userInfo = identity.userInfo;
 
   React.useEffect(() => {
     document.documentElement.style.setProperty("--sidebar-width", collapsed ? "88px" : "264px");
@@ -75,16 +81,28 @@ const Sidebar = ({ unreadCount = 0, myIssuesCount = 0 }) => {
   }, []);
 
   React.useEffect(() => {
-    setUserInfo(getDisplayUser(getUserFromStorage()));
+    setIdentity(readSidebarIdentity());
 
-    const onStorage = (e) => {
-      if (!e.key || e.key === "userData") {
-        setUserInfo(getDisplayUser(getUserFromStorage()));
-      }
+    const onStorage = () => {
+      setIdentity(readSidebarIdentity());
+    };
+
+    const onUserDataUpdated = () => {
+      setIdentity(readSidebarIdentity());
+    };
+
+    const onSessionUpdated = () => {
+      setIdentity(readSidebarIdentity());
     };
 
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener("cr:userDataUpdated", onUserDataUpdated);
+    window.addEventListener("cr:sessionUpdated", onSessionUpdated);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("cr:userDataUpdated", onUserDataUpdated);
+      window.removeEventListener("cr:sessionUpdated", onSessionUpdated);
+    };
   }, []);
 
   React.useEffect(() => {
@@ -105,16 +123,59 @@ const Sidebar = ({ unreadCount = 0, myIssuesCount = 0 }) => {
 
   const isActive = (path) => location.pathname === path || location.pathname.startsWith(path + "/");
 
-  const items = [
-    { path: "/dashboard",     label: "Dashboard",     icon: "home" },
-    { path: "/report",        label: "Report Issue",  icon: "plus" },
-    { path: "/my-issues",     label: "My Issues",     icon: "flag", count: myIssuesCount },
-    { path: "/notifications", label: "Notifications", icon: "bell", count: unreadCount },
+  React.useEffect(() => {
+    setLiveUnreadCount(unreadCount);
+  }, [unreadCount]);
+
+  React.useEffect(() => {
+    if (isAdmin) return;
+
+    let mounted = true;
+
+    const refreshUnread = async () => {
+      try {
+        const data = await api("/api/users/notifications");
+        const list = Array.isArray(data) ? data : data?.data || data?.notifications || [];
+        const unread = list.filter((n) => n && n.isRead === false).length;
+        if (mounted) setLiveUnreadCount(unread);
+      } catch {
+        // Keep last known count if fetch fails.
+      }
+    };
+
+    refreshUnread();
+    const intervalId = window.setInterval(refreshUnread, 20000);
+    const onFocus = () => refreshUnread();
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [isAdmin, location.pathname]);
+
+  const citizenItems = [
+    { path: "/dashboard", label: "Dashboard", icon: "home" },
+    { path: "/report", label: "Report Issue", icon: "plus" },
+    { path: "/my-issues", label: "My Issues", icon: "flag", count: myIssuesCount },
+    { path: "/notifications", label: "Notifications", icon: "bell", count: liveUnreadCount },
+    { path: "/analytics", label: "Analytics", icon: "sparkle" },
   ];
 
+  const adminItems = [
+    { path: "/admin/dashboard", label: "All Issues", icon: "home", count: counts?.open || 0 },
+    { path: "/admin/map", label: "Map View", icon: "map" },
+    { path: "/admin/analytics", label: "Analytics", icon: "sparkle" },
+    { path: "/admin/status-logs", label: "Status Logs", icon: "clock" },
+    { path: "/admin/notifications", label: "Notifications", icon: "bell", count: counts?.unread || 0 },
+    { path: "/admin/team", label: "Team", icon: "user" },
+  ];
+
+  const items = isAdmin ? adminItems : citizenItems;
+
   const handleSignOut = () => {
-    localStorage.removeItem("userToken");
-    localStorage.removeItem("userData");
+    clearSession();
     navigate("/login");
   };
 
@@ -135,7 +196,7 @@ const Sidebar = ({ unreadCount = 0, myIssuesCount = 0 }) => {
         </button>
         <div className="brand-name">
           CivicReport
-          <small>WORKFLOW · 01</small>
+          <small>{isAdmin ? "ADMIN · CONSOLE" : "CITIZEN · CONSOLE"}</small>
         </div>
       </div>
 
@@ -198,8 +259,8 @@ const Sidebar = ({ unreadCount = 0, myIssuesCount = 0 }) => {
 
         <button
           type="button"
-          className={`user-card user-card-link ${isActive("/profile") ? "active" : ""}`}
-          onClick={() => navigate("/profile")}
+          className={`user-card user-card-link ${isActive(isAdmin ? "/admin/profile" : "/profile") ? "active" : ""}`}
+          onClick={() => navigate(isAdmin ? "/admin/profile" : "/profile")}
           aria-label="Open profile"
           title="Open profile"
         >

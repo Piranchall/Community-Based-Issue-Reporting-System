@@ -40,7 +40,7 @@ const loadGoogleMapsScript = (apiKey) => {
   return googleMapsScriptPromise;
 };
 
-const MiniMap = ({ pins = [], pickable = false, onPick, selected, tall = false, centerLat, centerLon }) => {
+const MiniMap = ({ pins = [], pickable = false, onPick, selected, tall = false, centerLat, centerLon, showOverlayCoords = true }) => {
   const fallbackCenterLat = 47.6062;
   const fallbackCenterLon = -122.3321;
   const hasExplicitCenter = Number.isFinite(Number(centerLat)) && Number.isFinite(Number(centerLon));
@@ -235,14 +235,16 @@ const MiniMap = ({ pins = [], pickable = false, onPick, selected, tall = false, 
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
         />
-        <div className="map-overlay">
-          <div className="map-coord">
-            <span className="c-label">LAT</span>
-            <span>{mapCenter.latitude.toFixed(4)}</span>
-            <span className="c-label" style={{ marginLeft: 4 }}>LON</span>
-            <span>{mapCenter.longitude.toFixed(4)}</span>
+        {showOverlayCoords && (
+          <div className="map-overlay">
+            <div className="map-coord">
+              <span className="c-label">LAT</span>
+              <span>{mapCenter.latitude.toFixed(4)}</span>
+              <span className="c-label" style={{ marginLeft: 4 }}>LON</span>
+              <span>{mapCenter.longitude.toFixed(4)}</span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     );
   }
@@ -252,12 +254,14 @@ const MiniMap = ({ pins = [], pickable = false, onPick, selected, tall = false, 
       <div ref={mapRef} className="map-interactive" aria-label="Interactive location map" />
 
       <div className="map-overlay">
-        <div className="map-coord">
-          <span className="c-label">LAT</span>
-          <span>{selectedPoint?.latitude ? selectedPoint.latitude.toFixed(4) : baseCenterLat.toFixed(4)}</span>
-          <span className="c-label" style={{ marginLeft: 4 }}>LON</span>
-          <span>{selectedPoint?.longitude ? selectedPoint.longitude.toFixed(4) : baseCenterLon.toFixed(4)}</span>
-        </div>
+        {showOverlayCoords && (
+          <div className="map-coord">
+            <span className="c-label">LAT</span>
+            <span>{selectedPoint?.latitude ? selectedPoint.latitude.toFixed(4) : baseCenterLat.toFixed(4)}</span>
+            <span className="c-label" style={{ marginLeft: 4 }}>LON</span>
+            <span>{selectedPoint?.longitude ? selectedPoint.longitude.toFixed(4) : baseCenterLon.toFixed(4)}</span>
+          </div>
+        )}
         <button className="map-use-current" onClick={useCurrent}>
           <Icon name="pin" size={12} /> Use my location
         </button>

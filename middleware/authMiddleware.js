@@ -17,7 +17,15 @@ const authMiddleware = (req, res, next) => {
       return res.status(403).json({ error: 'Access denied: admin token cannot be used on citizen routes' });
     }
 
-    req.user = decoded;
+    const normalizedUserId = decoded.userId || decoded.id;
+    if (!normalizedUserId) {
+      return res.status(401).json({ error: 'Invalid token payload' });
+    }
+
+    req.user = {
+      ...decoded,
+      userId: String(normalizedUserId),
+    };
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {

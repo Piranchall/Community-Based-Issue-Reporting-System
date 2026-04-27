@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import AuthShell from "../components/AuthShell";
 import Icon from "../components/Icons";
 import { api } from "../lib/api";
+import { saveUserSession } from "../lib/auth";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ const Register = () => {
     setLoading(true);
     try {
       const data = await api("/api/users/register", { method: "POST", body: form, auth: false });
-      localStorage.setItem("userToken", data.token);
+      saveUserSession({ token: data.token, user: data.user });
       navigate("/dashboard");
     } catch (e2) {
       setErr(e2.message);

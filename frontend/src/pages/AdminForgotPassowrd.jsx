@@ -40,7 +40,7 @@ export default function ForgotPassword() {
         </button>
       </form>
       <div className="auth-foot">
-        <Link to="/admin/login" className="auth-link"><I.arrowLeft /> Back to sign in</Link>
+        <Link to="/login" className="auth-link"><I.arrowLeft /> Back to sign in</Link>
       </div>
     </AuthShell>
   );

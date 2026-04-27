@@ -134,10 +134,6 @@ CREATE INDEX "status_logs_adminId_idx" ON "status_logs"("adminId");
 -- CreateIndex
 CREATE INDEX "notifications_userId_idx" ON "notifications"("userId");
 
--- AlterTable
-ALTER TABLE "users" ADD COLUMN     "resetToken" TEXT,
-ADD COLUMN     "resetTokenExpiry" TIMESTAMP(3);
-
 -- AddForeignKey
 ALTER TABLE "issues" ADD CONSTRAINT "issues_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 

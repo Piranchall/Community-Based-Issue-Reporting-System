@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const notificationService = require('./notificationService');
 
 // Add an upvote to an issue
 const addUpvote = async (userId, issueId) => {
@@ -50,6 +51,15 @@ const addUpvote = async (userId, issueId) => {
       where: { id: issueId },
       data: { upvoteCount: { increment: 1 } }
     });
+
+    // Notify issue owner when someone else upvotes their issue
+    if (String(issue.userId) !== String(userId)) {
+      await notificationService.createNotification({
+        userId: issue.userId,
+        issueId,
+        message: `Your issue "${issue.title}" received a new upvote.`,
+      });
+    }
 
     return upvote;
   } catch (error) {

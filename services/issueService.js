@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const notificationService = require('./notificationService');
 
 // Create a new issue
 const createIssue = async (data) => {
@@ -30,6 +31,24 @@ const createIssue = async (data) => {
         comments: true
       }
     });
+    // Notify all admins about the new issue
+    try {
+      const admins = await prisma.admin.findMany({ select: { id: true } });
+      const reporter = issue.user
+        ? `${issue.user.firstName || ''} ${issue.user.lastName || ''}`.trim() || issue.user.email
+        : 'A citizen';
+      await Promise.all(admins.map(admin =>
+        notificationService.createNotification({
+          userId: String(admin.id),
+          issueId: issue.id,
+          message: `New issue reported: "${issue.title}" in ${issue.address || 'Unknown area'} by ${reporter}.`,
+        })
+      ));
+    } catch (notifErr) {
+      // Non-fatal — issue is already created, just log
+      console.error('Failed to notify admins:', notifErr.message);
+    }
+
     return issue;
   } catch (error) {
     throw new Error(`Failed to create issue: ${error.message}`);

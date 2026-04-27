@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AuthShell } from './ForgotPassword';
+import { AuthShell } from './AdminForgotPassowrd';
 import { AdminAuth } from '../lib/api';
 import { I } from '../components/Icons';
 
@@ -61,7 +61,7 @@ export default function ResetPassword() {
         </button>
       </form>
       <div className="auth-foot">
-        <Link to="/admin/login" className="auth-link"><I.arrowLeft /> Back to sign in</Link>
+        <Link to="/login" className="auth-link"><I.arrowLeft /> Back to sign in</Link>
       </div>
     </AuthShell>
   );

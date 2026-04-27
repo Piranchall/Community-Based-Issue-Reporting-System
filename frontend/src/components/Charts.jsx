@@ -100,48 +100,77 @@ function lighten(hex) {
   return hex.length === 7 ? hex + 'cc' : hex;
 }
 
-// ─── Trend bar chart (Issues Over Time) ──────────────────────────────────────
-export function TrendBars({ data = [], height = 220, accent = '#7CC3FF' }) {
+// ─── Trend line chart (Issues Over Time) ─────────────────────────────────────
+export function TrendBars({ data = [], height = 320 }) {
   if (!data?.length) return <Empty title="No trend data" sub="Try widening the date range" />;
-  const max = Math.max(...data.map((d) => d.count), 1);
-  const W = 800;
-  const H = height;
-  const padX = 24;
-  const padTop = 16;
-  const padBottom = 32;
-  const barAreaW = W - padX * 2;
-  const slot = barAreaW / data.length;
-  const barW = Math.max(6, Math.min(slot * 0.62, 28));
 
-  // Y-axis ticks
-  const yTicks = 4;
-  const tickStep = Math.ceil(max / yTicks);
+  const max   = Math.max(...data.map(d => d.count), 1);
+  const W     = 800;
+  const H     = height;
+  const padL  = 32;  // room for y-axis labels
+  const padR  = 16;
+  const padT  = 20;
+  const padB  = 44;  // room for x-axis labels
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+
+  // Nice y-axis: 5 ticks, rounded up to nearest clean number
+  const rawStep = max / 5;
+  const mag     = Math.pow(10, Math.floor(Math.log10(rawStep || 1)));
+  const step    = Math.max(1, Math.ceil(rawStep / mag) * mag);
+  const yMax    = step * 5;
+  const yTicks  = Array.from({ length: 6 }, (_, i) => step * i); // 0, step, 2step … 5step
+
+  // X positions
+  const xOf = (i) => padL + (i / Math.max(data.length - 1, 1)) * plotW;
+  const yOf = (v) => padT + plotH - (v / yMax) * plotH;
+
+  // Line path
+  const linePath = data.map((d, i) => `${i === 0 ? 'M' : 'L'}${xOf(i)},${yOf(d.count)}`).join(' ');
+
+  // Filled area under the line
+  const areaPath = [
+    `M${xOf(0)},${yOf(0)}`,
+    ...data.map((d, i) => `L${xOf(i)},${yOf(d.count)}`),
+    `L${xOf(data.length - 1)},${yOf(0)}`,
+    'Z',
+  ].join(' ');
+
+  // X labels — show at most 8, always include first and last
+  const maxLabels = 8;
+  const step_x    = Math.max(1, Math.ceil(data.length / maxLabels));
+  const labelIdx  = new Set([
+    0,
+    data.length - 1,
+    ...Array.from({ length: Math.floor(data.length / step_x) }, (_, i) => (i + 1) * step_x),
+  ]);
+
+  // Dot hover state handled via SVG title (tooltip on native hover)
+  const DOT_R = 3.5;
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ display: 'block' }}>
       <defs>
-        <linearGradient id="trendBar" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={accent} stopOpacity="0.95" />
-          <stop offset="60%" stopColor="#5B8DEF" stopOpacity="0.85" />
-          <stop offset="100%" stopColor="#5B8DEF" stopOpacity="0.15" />
+        <linearGradient id="lineArea" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor="#5B8DEF" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#5B8DEF" stopOpacity="0.01" />
         </linearGradient>
       </defs>
 
-      {/* gridlines */}
-      {Array.from({ length: yTicks + 1 }).map((_, i) => {
-        const y = padTop + ((H - padTop - padBottom) / yTicks) * i;
-        const v = tickStep * (yTicks - i);
+      {/* Horizontal gridlines + Y-axis labels */}
+      {yTicks.map((v) => {
+        const y = yOf(v);
         return (
-          <g key={i}>
-            <line x1={padX} x2={W - padX} y1={y} y2={y} stroke="rgba(255,255,255,0.05)" strokeDasharray="2 4" />
+          <g key={v}>
+            <line
+              x1={padL} x2={W - padR} y1={y} y2={y}
+              stroke="currentColor" strokeOpacity="0.07" strokeDasharray="3 5"
+            />
             <text
-              x={padX - 6}
-              y={y + 3}
+              x={padL - 6} y={y + 4}
               textAnchor="end"
-              fontFamily="JetBrains Mono"
-              fontSize="9"
-              letterSpacing="0.08em"
-              fill="#6B7090"
+              fontFamily="JetBrains Mono, monospace"
+              fontSize="10" fill="currentColor" fillOpacity="0.45"
             >
               {v}
             </text>
@@ -149,41 +178,48 @@ export function TrendBars({ data = [], height = 220, accent = '#7CC3FF' }) {
         );
       })}
 
-      {/* bars */}
-      {data.map((d, i) => {
-        const x = padX + slot * i + (slot - barW) / 2;
-        const usableH = H - padTop - padBottom;
-        const h = (d.count / (tickStep * yTicks)) * usableH;
-        const y = H - padBottom - h;
-        return (
-          <g key={i}>
-            <rect x={x} y={y} width={barW} height={h} rx="3" fill="url(#trendBar)">
-              <title>{`${d.label}: ${d.count}`}</title>
-            </rect>
-          </g>
-        );
-      })}
+      {/* Area fill */}
+      <path d={areaPath} fill="url(#lineArea)" />
 
-      {/* x-axis labels (every Nth) */}
+      {/* Line */}
+      <path
+        d={linePath}
+        fill="none"
+        stroke="#5B8DEF"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+
+      {/* Dots on data points */}
+      {data.map((d, i) => (
+        <circle key={i} cx={xOf(i)} cy={yOf(d.count)} r={DOT_R}
+          fill="#5B8DEF" stroke="white" strokeWidth="1.5" strokeOpacity="0.8">
+          <title>{`${d.label}: ${d.count} issue${d.count === 1 ? '' : 's'}`}</title>
+        </circle>
+      ))}
+
+      {/* X-axis labels */}
       {data.map((d, i) => {
-        const everyN = Math.max(1, Math.floor(data.length / 8));
-        if (i % everyN !== 0 && i !== data.length - 1) return null;
-        const x = padX + slot * i + slot / 2;
+        if (!labelIdx.has(i)) return null;
         return (
           <text
-            key={`l${i}`}
-            x={x}
-            y={H - 10}
-            textAnchor="middle"
-            fontFamily="JetBrains Mono"
-            fontSize="9"
-            letterSpacing="0.08em"
-            fill="#6B7090"
+            key={`xl${i}`}
+            x={xOf(i)} y={H - 10}
+            textAnchor={i === 0 ? 'start' : i === data.length - 1 ? 'end' : 'middle'}
+            fontFamily="JetBrains Mono, monospace"
+            fontSize="11" fontWeight="700" fill="currentColor" fillOpacity="0.7"
           >
             {d.label}
           </text>
         );
       })}
+
+      {/* Baseline */}
+      <line
+        x1={padL} x2={W - padR} y1={yOf(0)} y2={yOf(0)}
+        stroke="currentColor" strokeOpacity="0.12"
+      />
     </svg>
   );
 }
@@ -197,43 +233,59 @@ const CAT_RES_COLORS = {
   Other:       '#B47CFF',
 };
 
+function fmtResolution(days) {
+  if (days == null) return '—';
+  if (days >= 1) return <>{days}<span style={{ color: 'var(--ink-dim)', marginLeft: 2 }}>d</span></>;
+  const hrs = Math.round(days * 24);
+  if (hrs < 1) return <span style={{ color: 'var(--ink-dim)' }}>&lt; 1h</span>;
+  return <>{hrs}<span style={{ color: 'var(--ink-dim)', marginLeft: 2 }}>h</span></>;
+}
+
 export function ResolutionBars({ data = [], overall }) {
   if (!data?.length) return <Empty title="No resolutions yet" sub="Resolved issues will appear here" />;
-  const max = Math.max(...data.map((d) => d.avgResolutionDays), overall || 0, 1);
+  const max = Math.max(...data.map((d) => d.avgResolutionDays), overall || 0, 0.001);
+  const overallPct = overall != null ? (overall / max) * 100 : null;
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div>
       {data.map((d) => {
         const c = CAT_RES_COLORS[d.category] || '#7CC3FF';
-        const pct = (d.avgResolutionDays / max) * 100;
+        const pct = Math.max((d.avgResolutionDays / max) * 100, d.avgResolutionDays > 0 ? 3 : 0);
         return (
           <div key={d.category} className="chart-bar-row">
             <div className="chart-bar-label">{d.category}</div>
-            <div className="chart-bar-track" style={{ height: 12 }}>
-              <div
-                className="chart-bar-fill"
-                style={{
-                  width: `${pct}%`,
-                  height: '100%',
-                  background: `linear-gradient(90deg, ${c}, ${c}cc)`,
-                }}
-              />
-              {overall != null && (
+            {/* wrapper keeps track + marker in same relative context, outside overflow:hidden */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <div className="chart-bar-track" style={{ height: 20, flex: 1, overflow: 'hidden', borderRadius: 6 }}>
                 <div
-                  title={`Overall avg: ${overall}d`}
+                  style={{
+                    width: `${pct}%`,
+                    height: '100%',
+                    borderRadius: 6,
+                    background: `linear-gradient(90deg, ${c}bb, ${c})`,
+                    transition: 'width 700ms cubic-bezier(.16,1,.3,1)',
+                  }}
+                />
+              </div>
+              {overallPct != null && (
+                <div
+                  title={`Overall avg`}
                   style={{
                     position: 'absolute',
-                    top: -3,
-                    bottom: -3,
-                    left: `${(overall / max) * 100}%`,
-                    width: 1,
-                    background: 'var(--ink-mute)',
-                    boxShadow: '0 0 0 0 transparent',
+                    top: -4,
+                    bottom: -4,
+                    left: `${overallPct}%`,
+                    width: 2,
+                    borderRadius: 2,
+                    background: 'rgba(180,180,200,0.7)',
+                    pointerEvents: 'none',
                   }}
                 />
               )}
             </div>
-            <div className="chart-bar-value">{d.avgResolutionDays}<span style={{ color: 'var(--ink-dim)', marginLeft: 2 }}>d</span></div>
+            <div className="chart-bar-value">
+              {fmtResolution(d.avgResolutionDays)}
+            </div>
           </div>
         );
       })}
@@ -241,7 +293,7 @@ export function ResolutionBars({ data = [], overall }) {
         <div className="legend">
           <span className="legend-item">
             <span className="legend-swatch" style={{ background: 'var(--ink-mute)' }} />
-            Overall avg · <span className="mono" style={{ color: 'var(--ink)', marginLeft: 4 }}>{overall} days</span>
+            Overall avg · <span className="mono" style={{ color: 'var(--ink)', marginLeft: 4 }}>{fmtResolution(overall)}</span>
           </span>
         </div>
       )}

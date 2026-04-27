@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { AuthShell } from './ForgotPassword';
+import { AuthShell } from './AdminForgotPassowrd';
 import { I } from '../components/Icons';
 
 export default function ResetSuccess() {
@@ -13,7 +13,7 @@ export default function ResetSuccess() {
       </div>
       <h1 className="auth-title" style={{ textAlign: 'center' }}>Password reset!</h1>
       <p className="auth-sub" style={{ textAlign: 'center' }}>You can now sign in with your new password. All previous sessions have been revoked.</p>
-      <Link to="/admin/login" className="btn btn-primary btn-lg btn-block" style={{ marginTop: 12 }}>
+      <Link to="/login" className="btn btn-primary btn-lg btn-block" style={{ marginTop: 12 }}>
         Continue to sign in <I.arrowRight />
       </Link>
     </AuthShell>

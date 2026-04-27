@@ -70,7 +70,7 @@ const AuthVisual = ({ variant }) => {
           <CategoryPill category="Water" />
           <StatusBadge status="In Progress" />
         </div>
-        <div style={{ fontSize: 14, fontWeight: 500, color: "white", marginBottom: 4 }}>
+        <div style={{ fontSize: 14, fontWeight: 500, color: "var(--white)", marginBottom: 4 }}>
           Water main leaking at 14th &amp; Oak
         </div>
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-500)" }}>
@@ -88,8 +88,8 @@ const AuthVisual = ({ variant }) => {
           {["MR", "JP", "KT", "AL", "+"].map((a, i) => (
             <div key={i} style={{
               width: 26, height: 26, borderRadius: "50%",
-              background: i === 4 ? "rgba(255,255,255,0.06)" : `linear-gradient(135deg, ${["#5E9CFF","#C9F23E","#F59E0B","#A78BFA"][i]}, ${["#3E7BFA","#A8D61F","#D97706","#7C3AED"][i]})`,
-              border: "2px solid #0E1629",
+              background: i === 4 ? "var(--ink-800)" : `linear-gradient(135deg, ${["#5E9CFF","#C9F23E","#F59E0B","#A78BFA"][i]}, ${["#3E7BFA","#A8D61F","#D97706","#7C3AED"][i]})`,
+              border: "2px solid var(--ink-850)",
               display: "grid", placeItems: "center",
               fontSize: 9, fontWeight: 600,
               color: i === 4 ? "var(--ink-400)" : (i === 1 ? "#0B1223" : "white"),

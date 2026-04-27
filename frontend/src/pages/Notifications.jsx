@@ -25,17 +25,31 @@ const Notifications = () => {
     })();
   }, []);
 
-  const unread = items.filter(i => i.unread ?? !i.readAt).length;
+  const isUnreadNotification = (item) => {
+    if (typeof item.unread === "boolean") return item.unread;
+    if (typeof item.isRead === "boolean") return !item.isRead;
+    return !item.readAt;
+  };
+
+  const unread = items.filter(isUnreadNotification).length;
 
   const markAll = async () => {
-    setItems(items.map(i => ({ ...i, unread: false, readAt: new Date().toISOString() })));
-    try { await api("/api/users/notifications/read-all", { method: "POST" }); }
-    catch (e) { setErr(e.message); }
+    const unreadIds = items
+      .filter(isUnreadNotification)
+      .map(i => i.id);
+
+    setItems(items.map(i => ({ ...i, unread: false, isRead: true, readAt: i.readAt || new Date().toISOString() })));
+
+    try {
+      await Promise.all(unreadIds.map(id => api(`/api/users/notifications/${id}`, { method: "PUT" })));
+    } catch (e) {
+      setErr(e.message);
+    }
   };
 
   const markOne = async (id) => {
-    setItems(items.map(i => i.id === id ? { ...i, unread: false, readAt: new Date().toISOString() } : i));
-    try { await api(`/api/users/notifications/${id}/read`, { method: "POST" }); }
+    setItems(items.map(i => i.id === id ? { ...i, unread: false, isRead: true, readAt: i.readAt || new Date().toISOString() } : i));
+    try { await api(`/api/users/notifications/${id}`, { method: "PUT" }); }
     catch (e) { setErr(e.message); }
   };
 
@@ -59,14 +73,14 @@ const Notifications = () => {
         ) : (
           <div className="card" style={{ padding: 0, overflow: "hidden" }}>
             {items.map(n => {
-              const isUnread = n.unread ?? !n.readAt;
+              const isUnread = isUnreadNotification(n);
               return (
                 <div key={n.id} className={`notif ${isUnread ? "unread" : ""}`}
                   onClick={() => { markOne(n.id); if (n.issueId) navigate(`/issues/${n.issueId}`); }}>
                   <div className="n-ico"><Icon name={n.icon || "bell"} size={18}/></div>
                   <div className="n-body">
-                    <div className="n-title">{n.title}</div>
-                    <div className="n-sub">{n.sub || n.body}</div>
+                    <div className="n-title">Issue status update</div>
+                    <div className="n-sub">{n.message || n.sub || n.body}</div>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     {isUnread && <span className="n-unread-dot"></span>}

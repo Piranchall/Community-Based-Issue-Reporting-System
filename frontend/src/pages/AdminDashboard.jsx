@@ -6,8 +6,6 @@ import { AdminIssues, Notifications } from '../lib/api';
 import { I } from '../components/Icons';
 import { formatDate, STATUSES, shortId } from '../lib/format';
 
-const CATEGORIES = ['All', 'Pothole', 'Streetlight', 'Garbage', 'Water', 'Graffiti', 'Signage', 'Other'];
-const AREAS = ['All', 'Downtown', 'Northside', 'Riverside', 'West Hills', 'Industrial', 'Uptown'];
 
 export default function AdminDashboard() {
   const nav = useNavigate();
@@ -77,13 +75,42 @@ export default function AdminDashboard() {
     return { total, pending, inProgress, resolved, rejected, open, upvotes };
   }, [issues]);
 
+  // Derive categories and areas from loaded issues
+  const dynamicCategories = useMemo(() => {
+    const cats = [...new Set(issues.map(i => i.category).filter(Boolean))].sort();
+    return cats;
+  }, [issues]);
+
+  const dynamicAreas = useMemo(() => {
+    const areas = [...new Set(issues.map(i => i.area || i.address).filter(Boolean))].sort();
+    return areas;
+  }, [issues]);
+
+
+  // Priority tiers derived from backend priorityScore (upvotes + GPS density)
+  // Max score in current dataset sets the scale so tiers are always relative
+  const priorityMap = useMemo(() => {
+    if (!issues.length) return {};
+    const max = Math.max(...issues.map(i => i.priorityScore ?? i.upvoteCount ?? 0), 1);
+    const result = {};
+    issues.forEach(i => {
+      const score = i.priorityScore ?? i.upvoteCount ?? 0;
+      const pct = (score / max) * 100;
+      result[i.id] = {
+        score,
+        tier: pct >= 70 ? 'Critical' : pct >= 40 ? 'High' : pct >= 15 ? 'Medium' : 'Low',
+      };
+    });
+    return result;
+  }, [issues]);
+
   function toggleSort(col) {
     if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortBy(col); setSortDir('desc'); }
   }
 
   return (
-    <AppShell crumbs={['Workspace', 'Issues']} counts={{ open: kpis.open, unread }}>
+    <AppShell crumbs={['Workspace', 'Issues']} counts={{ open: kpis.open, unread }} onSearch={q => setFilters(f => ({ ...f, q }))}>
       <div className="page">
         <div className="page-head">
           <div>
@@ -112,10 +139,12 @@ export default function AdminDashboard() {
             {STATUSES.map(s => <option key={s}>{s}</option>)}
           </select>
           <select className="select" value={filters.category} onChange={e => setFilters(f => ({ ...f, category: e.target.value }))}>
-            {CATEGORIES.map(c => <option key={c} value={c === 'All' ? '' : c}>{c === 'All' ? 'All categories' : c}</option>)}
+            <option value="">All categories</option>
+            {dynamicCategories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
           <select className="select" value={filters.area} onChange={e => setFilters(f => ({ ...f, area: e.target.value }))}>
-            {AREAS.map(a => <option key={a} value={a === 'All' ? '' : a}>{a === 'All' ? 'All areas' : a}</option>)}
+            <option value="">All areas</option>
+            {dynamicAreas.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
           <input className="input" type="date" value={filters.dateFrom}
             onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))} />
@@ -140,18 +169,19 @@ export default function AdminDashboard() {
                 <Th label="Area" />
                 <Th label="Status" sort="status" active={sortBy} dir={sortDir} onClick={() => toggleSort('status')} />
                 <Th label="Upvotes" sort="upvoteCount" active={sortBy} dir={sortDir} onClick={() => toggleSort('upvoteCount')} right />
+                <Th label="Priority" sort="priority" active={sortBy} dir={sortDir} onClick={() => toggleSort('priority')} />
                 <Th label="Reported" sort="createdAt" active={sortBy} dir={sortDir} onClick={() => toggleSort('createdAt')} />
                 <Th label="" />
               </tr>
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center' }}>
+                <tr><td colSpan={10} style={{ padding: 40, textAlign: 'center' }}>
                   <span className="spinner" style={{ margin: '0 auto' }} />
                 </td></tr>
               )}
               {!loading && filtered.length === 0 && (
-                <tr><td colSpan={8}>
+                <tr><td colSpan={10}>
                   <div className="empty">
                     <div className="icon"><I.list /></div>
                     <div className="title">No issues match</div>
@@ -172,6 +202,7 @@ export default function AdminDashboard() {
                   <td style={{ textAlign: 'right' }}>
                     <span className="upvote-chip"><I.upvote width={11} height={11} /> {it.upvoteCount ?? 0}</span>
                   </td>
+                  <td><PriorityBadge p={priorityMap[it.id]} /></td>
                   <td className="muted num">{formatDate(it.createdAt, { relative: true })}</td>
                   <td style={{ textAlign: 'right' }}><I.arrowRight /></td>
                 </tr>
@@ -181,6 +212,29 @@ export default function AdminDashboard() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function PriorityBadge({ p }) {
+  if (!p) return <span className="muted">—</span>;
+  const COLORS = {
+    Critical: { bg: 'rgba(242,109,109,0.15)', color: '#F26D6D', border: 'rgba(242,109,109,0.35)' },
+    High:     { bg: 'rgba(245,166,35,0.15)',  color: '#F5A623', border: 'rgba(245,166,35,0.35)' },
+    Medium:   { bg: 'rgba(91,141,239,0.15)',  color: '#5B8DEF', border: 'rgba(91,141,239,0.35)' },
+    Low:      { bg: 'rgba(180,180,200,0.10)', color: 'var(--ink-3)', border: 'rgba(180,180,200,0.2)' },
+  };
+  const c = COLORS[p.tier] || COLORS.Low;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      padding: '3px 8px', borderRadius: 6,
+      background: c.bg, border: `1px solid ${c.border}`,
+      color: c.color, fontSize: 11, fontWeight: 600,
+      fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
+      whiteSpace: 'nowrap',
+    }}>
+      {p.tier}
+    </span>
   );
 }
 

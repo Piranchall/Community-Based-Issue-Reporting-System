@@ -6,7 +6,7 @@ import FilteredAnalytics from './pages/FilteredAnalytics';
 import MapView from './pages/MapView';
 
 // WF1 — Citizen pages
-import Login from "./pages/Login";
+import UnifiedLogin from "./pages/UnifiedLogin";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import EnterCode from "./pages/EnterCode";
@@ -20,28 +20,25 @@ import Notifications from "./pages/Notifications";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import { applyTheme, readThemeMode } from "./lib/theme";
+import { clearSession, isUserAuthed } from "./lib/auth";
 
 // WF2 — Admin pages
-import AdminLogin from "./pages/AdminLogin";
+import AdminForgotPassword from "./pages/AdminForgotPassowrd";
+import AdminEnterCode from "./pages/AdminEnterCode";
+import AdminResetPassword from "./pages/AdminResetPassword";
+import AdminResetSuccess from "./pages/AdminResetSuccess";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminIssueDetail from "./pages/AdminIssueDetail";
 import StatusLogs from "./pages/StatusLogs";
 import AdminNotifications from "./pages/AdminNotifications";
 import CreateAdmin from "./pages/CreateAdmin";
+import AdminProfile from "./pages/AdminProfile";
 import ProtectedRoute from "./components/ProtectedRoute";
-
-const isTokenExpired = (token) => {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return payload?.exp ? payload.exp * 1000 <= Date.now() : false;
-  } catch { return true; }
-};
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const RequireAuth = ({ children }) => {
-  const token = localStorage.getItem("userToken");
-  if (!token || isTokenExpired(token)) {
-    localStorage.removeItem("userToken");
-    localStorage.removeItem("userData");
+  if (!isUserAuthed()) {
+    clearSession();
     return <Navigate to="/login" replace />;
   }
   return children;
@@ -60,7 +57,7 @@ export default function App() {
       <Routes>
         {/* WF1 — Citizen routes */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<UnifiedLogin />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/forgot-password/code" element={<EnterCode />} />
@@ -75,21 +72,25 @@ export default function App() {
         <Route path="/users/:id" element={<RequireAuth><UserProfile /></RequireAuth>} />
 
         {/* WF2 — Admin routes */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/forgot-password" element={<ForgotPassword />} />
-        <Route path="/admin/enter-code" element={<EnterCode />} />
-        <Route path="/admin/reset-password" element={<ResetPassword />} />
-        <Route path="/admin/reset-success" element={<ResetSuccess />} />
+        <Route path="/admin/login" element={<Navigate to="/login" replace />} />
+        <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
+        <Route path="/admin/enter-code" element={<AdminEnterCode />} />
+        <Route path="/admin/reset-password" element={<AdminResetPassword />} />
+        <Route path="/admin/reset-success" element={<AdminResetSuccess />} />
         <Route path="/admin/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin/issues/:id" element={<ProtectedRoute><AdminIssueDetail /></ProtectedRoute>} />
         <Route path="/admin/status-logs" element={<ProtectedRoute><StatusLogs /></ProtectedRoute>} />
         <Route path="/admin/notifications" element={<ProtectedRoute><AdminNotifications /></ProtectedRoute>} />
         <Route path="/admin/team" element={<ProtectedRoute><CreateAdmin /></ProtectedRoute>} />
+        <Route path="/admin/profile" element={<ProtectedRoute><AdminProfile /></ProtectedRoute>} />
 
         {/* WF3 — Analytics routes */}
-        <Route path="/analytics" element={<AnalyticsOverview />} />
-        <Route path="/analytics/filtered" element={<FilteredAnalytics />} />
-        <Route path="/map" element={<ProtectedRoute><MapView /></ProtectedRoute>} />
+        <Route path="/analytics" element={<RequireAuth><ErrorBoundary><AnalyticsOverview /></ErrorBoundary></RequireAuth>} />
+        <Route path="/analytics/filtered" element={<RequireAuth><ErrorBoundary><FilteredAnalytics /></ErrorBoundary></RequireAuth>} />
+        <Route path="/map" element={<Navigate to="/admin/map" replace />} />
+        <Route path="/admin/analytics" element={<ProtectedRoute><ErrorBoundary><AnalyticsOverview /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/analytics/filtered" element={<ProtectedRoute><ErrorBoundary><FilteredAnalytics /></ErrorBoundary></ProtectedRoute>} />
+        <Route path="/admin/map" element={<ProtectedRoute><ErrorBoundary><MapView /></ErrorBoundary></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   );

@@ -53,6 +53,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Workflow 1
+app.use('/api/auth',     require('./routes/auth'));
 app.use('/api/users',    require('./routes/users'));
 app.use('/api/issues',   require('./routes/issues'));
 app.use('/api/upvotes',  require('./routes/upvotes'));

@@ -61,6 +61,13 @@ const ReportIssue = () => {
     if (f) setPhotoFile(f);
   };
 
+  const selectedLat = pin
+    ? (pin.latitude ?? 47.6 + (pin.y / 100 - 0.5) * -0.03)
+    : null;
+  const selectedLon = pin
+    ? (pin.longitude ?? -122.33 + (pin.x / 100 - 0.5) * 0.04)
+    : null;
+
   const StepsBar = (
     <div className="stepper">
       <div className={`step ${step >= 0 ? "active" : ""} ${step > 0 ? "done" : ""}`}>
@@ -180,7 +187,7 @@ const ReportIssue = () => {
             <p style={{ color: "var(--ink-500)", fontSize: 13, margin: "0 0 20px" }}>
               Click on the map to place a pin, or use your current location.
             </p>
-            <MiniMap pickable selected={pin} onPick={setPin} tall />
+            <MiniMap pickable selected={pin} onPick={setPin} tall showOverlayCoords={false} />
             <div style={{
               marginTop: 14, padding: "14px 18px",
               border: "1px solid var(--stroke-soft)", borderRadius: "var(--r-md)",
@@ -190,14 +197,17 @@ const ReportIssue = () => {
               <div>
                 <div style={{ fontSize: 13, fontWeight: 500 }}>{pin ? "Pin placed" : "No location yet"}</div>
                 <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-500)", marginTop: 2 }}>
-                  {pin
-                    ? `${(pin.latitude ?? 47.6 + (pin.y/100 - 0.5) * -0.03).toFixed(4)}° N, ${(pin.longitude ?? -122.33 + (pin.x/100 - 0.5) * 0.04).toFixed(4)}° W`
-                    : "Click the map or use your location"}
+                  {pin ? "Address entered below" : "Click the map or use your location"}
                 </div>
               </div>
               <div className="field dark" style={{ marginBottom: 0, width: 280 }}>
                 <input className="input" placeholder="Address (optional)"
                   value={form.address} onChange={e => setForm({ ...form, address: e.target.value })}/>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-500)", marginTop: 8 }}>
+                  {pin
+                    ? `LAT ${selectedLat.toFixed(4)} · LON ${selectedLon.toFixed(4)}`
+                    : "LAT -- · LON --"}
+                </div>
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24 }}>
@@ -232,7 +242,7 @@ const ReportIssue = () => {
                   <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-500)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 4 }}>LOCATION</div>
                   <div style={{ fontSize: 13, color: "var(--ink-200)" }}>{form.address || "—"}</div>
                   <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-500)", marginTop: 2 }}>
-                    {pin ? `${(pin.latitude ?? 47.6 + (pin.y/100 - 0.5) * -0.03).toFixed(4)}° N, ${(pin.longitude ?? -122.33 + (pin.x/100 - 0.5) * 0.04).toFixed(4)}° W` : ""}
+                    {pin ? `${selectedLat.toFixed(4)}° N, ${selectedLon.toFixed(4)}° W` : ""}
                   </div>
                 </div>
                 <div>
@@ -246,7 +256,7 @@ const ReportIssue = () => {
 
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24 }}>
               <Button variant="ghost" icon="arrowLeft" onClick={back} disabled={submitting}>Back</Button>
-              <Button variant="lime" iconRight="arrowRight" onClick={submit} disabled={submitting}>
+              <Button variant="primary" iconRight="arrowRight" onClick={submit} disabled={submitting}>
                 {submitting ? "Submitting…" : "Submit report"}
               </Button>
             </div>

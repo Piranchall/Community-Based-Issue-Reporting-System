@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Layout } from '../components/Layout.jsx';
+import { useNavigate } from 'react-router-dom';
+import AppShell from '../components/AppShell.jsx';
 import { FilterBar } from '../components/FilterBar.jsx';
 import { StatCard, BarList, TrendBars, ResolutionBars, RankList, Skeleton } from '../components/Charts.jsx';
 import { ExportCsvModal } from '../components/ExportCsvModal.jsx';
@@ -10,6 +10,7 @@ import { getAdmin } from '../lib/auth.js';
 
 export default function AnalyticsOverview() {
   const admin = isAdmin();
+  const navigate = useNavigate();
   const adminUser = getAdmin();
   // Read citizen info from WF1's storage key; fall back gracefully
   const citizenUser = (() => { try { return JSON.parse(localStorage.getItem('userData') || 'null'); } catch { return null; } })();
@@ -72,14 +73,10 @@ export default function AnalyticsOverview() {
   const trendCounts = trendBars.map((d) => d.count);
 
   return (
-    <Layout
-      role={admin ? 'admin' : 'citizen'}
-      user={currentUser}
-      crumbs={['Analytics', 'Overview']}
-    >
+    <AppShell crumbs={['Analytics', 'Overview']}>
+      <div className="main">
       <div className="page-head">
         <div className="title-block">
-          <span className="eyebrow">Workflow 3 · Analytics</span>
           <div className="title-row">
             <h1 className="h1">Analytics Overview</h1>
           </div>
@@ -97,16 +94,11 @@ export default function AnalyticsOverview() {
       </div>
 
       <FilterBar
-        range={range} setRange={setRange}
-        category={category} setCategory={setCategory}
-        status={status} setStatus={setStatus}
-        area={area} setArea={setArea}
+        range={range} setRange={(v) => { setRange(v); if (v !== '30d') navigate(admin ? '/admin/analytics/filtered' : '/analytics/filtered'); }}
+        category={category} setCategory={(v) => { setCategory(v); if (v) navigate(admin ? '/admin/analytics/filtered' : '/analytics/filtered'); }}
+        status={status} setStatus={(v) => { setStatus(v); if (v) navigate(admin ? '/admin/analytics/filtered' : '/analytics/filtered'); }}
+        area={area} setArea={(v) => { setArea(v); if (v) navigate(admin ? '/admin/analytics/filtered' : '/analytics/filtered'); }}
         onClear={() => { setRange('30d'); setCategory(null); setStatus(null); setArea(null); }}
-        rightSlot={
-          <Link to={{ pathname: '/analytics/filtered' }} className="btn btn-ghost">
-            <Icon name="filter" size={13} /> Open Filtered View
-          </Link>
-        }
       />
 
       {/* — Stat row — */}
@@ -162,7 +154,13 @@ export default function AnalyticsOverview() {
           right={
             resByCat?.overallAvgDays != null && (
               <div className="chip">
-                Overall · <span className="mono" style={{ marginLeft: 4 }}>{resByCat.overallAvgDays}d</span>
+                Overall · <span className="mono" style={{ marginLeft: 4 }}>
+                  {resByCat.overallAvgDays >= 1
+                    ? `${resByCat.overallAvgDays}d`
+                    : Math.round(resByCat.overallAvgDays * 24) < 1
+                      ? '< 1h'
+                      : `${Math.round(resByCat.overallAvgDays * 24)}h`}
+                </span>
               </div>
             )
           }
@@ -174,7 +172,8 @@ export default function AnalyticsOverview() {
       )}
 
       <ExportCsvModal open={exportOpen} onClose={() => setExportOpen(false)} initialFilters={filters} />
-    </Layout>
+      </div>
+    </AppShell>
   );
 }
 

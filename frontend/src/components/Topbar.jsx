@@ -1,7 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { I } from './Icons';
+import { getSession, ROLE } from '../lib/auth';
 
-export default function Topbar({ crumbs = [], children }) {
+export default function Topbar({ crumbs = [], onSearch, children }) {
+  const navigate = useNavigate();
+  const isAdmin = getSession()?.role === ROLE.ADMIN;
+
   return (
     <header className="topbar">
       <div className="breadcrumb">
@@ -13,13 +18,22 @@ export default function Topbar({ crumbs = [], children }) {
         ))}
       </div>
       <div className="topbar-spacer" />
-      <div className="search">
-        <I.search />
-        <input placeholder="Search issues, users, IDs…" />
-        <kbd>⌘K</kbd>
-      </div>
-      <button className="icon-btn" title="Notifications"><I.bell /><span className="dot" /></button>
-      <button className="icon-btn" title="Settings"><I.settings /></button>
+      {onSearch && (
+        <div className="search">
+          <I.search />
+          <input placeholder="Search issues, IDs…" onChange={e => onSearch(e.target.value)} />
+          <kbd>⌘K</kbd>
+        </div>
+      )}
+      {isAdmin && (
+        <button
+          className="icon-btn"
+          title="Notifications"
+          onClick={() => navigate('/admin/notifications')}
+        >
+          <I.bell />
+        </button>
+      )}
       {children}
     </header>
   );

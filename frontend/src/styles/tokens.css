@@ -101,3 +101,38 @@
                  0 8px 24px -10px rgba(62,123,250,0.2);
   --shadow-auth: 0 30px 80px -28px rgba(11,18,35,0.3);
 }
+
+/* ── WF3 Analytics CSS variable aliases ─────────────────────────────────── */
+:root {
+  --bg-canvas:       var(--bg-1);
+  --bg-card:         var(--bg-2);
+  --bg-card-raised:  var(--bg-3);
+  --bg-input:        var(--bg-2);
+  --bg-overlay:      rgba(7,9,15,0.78);
+  --bg-shell:        var(--bg-0);
+
+  --line:            var(--border-1);
+  --line-strong:     var(--border-2);
+  --line-accent:     rgba(61,126,255,0.35);
+
+  --ink:             var(--ink-1);
+  --ink-mute:        var(--ink-2);
+  --ink-dim:         var(--ink-3);
+  --ink-faint:       var(--ink-4);
+
+  --accent:          var(--acc);
+  --accent-bright:   var(--acc-hi);
+  --accent-deep:     var(--acc-lo);
+  --signal:          #C5F23F;
+  --signal-deep:     #8FB525;
+
+  --status-pending:  var(--st-pending-fg);
+  --status-progress: var(--st-progress-fg);
+  --status-resolved: var(--st-resolved-fg);
+  --status-rejected: var(--st-rejected-fg);
+
+  --font-display:    var(--font-sans);
+  --shadow-card:     var(--sh-md);
+  --shadow-pop:      var(--sh-lg);
+  --sidebar-w:       264px;
+}

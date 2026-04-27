@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import AppShell from '../components/AppShell';
+import ImageLightbox from '../components/ImageLightbox';
 import StatusPill from '../components/StatusPill';
 import { AdminIssues, StatusLogs } from '../lib/api';
+import { resolveMediaUrl } from '../lib/api';
 import { I } from '../components/Icons';
 import { formatDate, STATUSES, shortId, statusPillClass } from '../lib/format';
 import { getAdmin } from '../lib/auth';
+import { buildGoogleEmbedUrl, hasGoogleMapsKey } from '../lib/maps';
 
 // Derive priority from upvote count — no priority field in DB
 function derivePriority(upvoteCount = 0) {
@@ -58,6 +61,8 @@ export default function IssueDetail() {
 
   // Success screen state
   const [successData, setSuccessData] = useState(null);
+  const hasEvidence = Boolean(issue?.image && String(issue.image).trim());
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   async function load() {
     setLoading(true); setErr('');
@@ -349,20 +354,27 @@ export default function IssueDetail() {
                 </div>
               </div>
 
-              {/* Uploaded Evidence */}
-              <div className="card">
-                <div className="card-head"><div className="card-title">Uploaded Evidence</div></div>
-                <div className="card-body">
-                  <div style={{
-                    border: '2px dashed var(--border-2)', borderRadius: 10,
-                    padding: '40px 20px', textAlign: 'center', color: 'var(--ink-3)', fontSize: 13,
-                  }}>
-                    {issue.image
-                      ? <img src={issue.image} alt="Evidence" style={{ maxWidth: '100%', borderRadius: 8 }} />
-                      : '[Citizen-uploaded photo of the issue]'}
+              {hasEvidence && (
+                <div className="card">
+                  <div className="card-head"><div className="card-title">Uploaded Evidence</div></div>
+                  <div className="card-body">
+                    <div style={{
+                      border: '2px dashed var(--border-2)', borderRadius: 10,
+                      padding: '16px', textAlign: 'center', color: 'var(--ink-3)', fontSize: 13,
+                    }}>
+                      <img
+                        src={resolveMediaUrl(issue.image)}
+                        alt="Evidence"
+                        style={{ maxWidth: '100%', borderRadius: 8, cursor: 'zoom-in' }}
+                        onClick={() => setLightboxOpen(true)}
+                      />
+                      <div style={{ marginTop: 8, fontSize: 12 }}>
+                        
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Location on Map */}
               <div className="card">
@@ -404,16 +416,16 @@ export default function IssueDetail() {
                     </div>
 
                     {/* Quick action buttons */}
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button type="button" className="btn btn-primary" style={{ fontSize: 13 }}
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button type="button" className="btn btn-primary" style={{ fontSize: 13, flex: '1 1 150px' }}
                         onClick={() => setNewStatus('In Progress')}>
                         Mark in Progress
                       </button>
-                      <button type="button" className="btn" style={{ background: '#38a169', color: '#fff', fontSize: 13 }}
+                      <button type="button" className="btn" style={{ background: '#38a169', color: '#fff', fontSize: 13, flex: '1 1 130px' }}
                         onClick={() => setNewStatus('Resolved')}>
                         Mark Resolved
                       </button>
-                      <button type="button" className="btn" style={{ background: '#e53e3e', color: '#fff', fontSize: 13 }}
+                      <button type="button" className="btn" style={{ background: '#e53e3e', color: '#fff', fontSize: 13, flex: '1 1 120px' }}
                         onClick={() => setNewStatus('Rejected')}>
                         Reject Issue
                       </button>
@@ -443,6 +455,15 @@ export default function IssueDetail() {
               </div>
             </div>
           </div>
+        )}
+
+        {issue?.image && (
+          <ImageLightbox
+            open={lightboxOpen}
+            src={issue.image}
+            alt={issue.title || 'Uploaded evidence'}
+            onClose={() => setLightboxOpen(false)}
+          />
         )}
       </div>
     </AppShell>
@@ -492,40 +513,36 @@ export function Timeline({ logs, currentStatus, createdAt }) {
 }
 
 function MapCard({ issue }) {
+  const lat = Number(issue?.latitude);
+  const lng = Number(issue?.longitude);
+  const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
+  const mapUrl = buildGoogleEmbedUrl({
+    lat,
+    lng,
+    query: issue?.address || 'Karachi, Pakistan',
+    zoom: 15,
+  });
+
   return (
     <div style={{
       position: 'relative', aspectRatio: '4 / 3',
       background: 'linear-gradient(160deg, #0A1026, #0B0F1A)',
       borderRadius: 'inherit', overflow: 'hidden',
     }}>
-      <svg width="100%" height="100%" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice"
-           style={{ display: 'block', opacity: 0.9 }}>
-        <defs>
-          <pattern id="gridp" width="20" height="20" patternUnits="userSpaceOnUse">
-            <path d="M20 0H0V20" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-          </pattern>
-        </defs>
-        <rect width="400" height="300" fill="url(#gridp)" />
-        <path d="M0 180 C 60 170, 120 200, 200 180 S 340 150, 400 170" stroke="rgba(61,126,255,0.35)" strokeWidth="2" fill="none" />
-        <path d="M120 0 L 160 300" stroke="rgba(255,255,255,0.08)" strokeWidth="3" fill="none" />
-        <path d="M280 0 L 240 300" stroke="rgba(255,255,255,0.08)" strokeWidth="3" fill="none" />
-        <path d="M0 80 Q 200 130 400 90" stroke="rgba(255,255,255,0.08)" strokeWidth="3" fill="none" />
-        {[[40,40,60,50],[220,40,110,60],[40,110,70,40],[250,120,60,40]].map(([x,y,w,h],i)=>(
-          <rect key={i} x={x} y={y} width={w} height={h} fill="rgba(255,255,255,0.025)" stroke="rgba(255,255,255,0.06)" />
-        ))}
-        <g transform="translate(200 170)">
-          <circle r="22" fill="rgba(61,126,255,0.15)"><animate attributeName="r" from="14" to="30" dur="2s" repeatCount="indefinite" /><animate attributeName="opacity" from="0.4" to="0" dur="2s" repeatCount="indefinite" /></circle>
-          <circle r="8" fill="#3D7EFF" />
-          <circle r="3" fill="#fff" />
-        </g>
-      </svg>
+      <iframe
+        title="Issue location map"
+        src={mapUrl}
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        style={{ width: '100%', height: '100%', border: 0 }}
+      />
       <div style={{
         position: 'absolute', left: 12, bottom: 12,
         background: 'rgba(7,9,15,0.7)', border: '1px solid var(--border-2)',
         borderRadius: 8, padding: '8px 12px', fontFamily: 'var(--font-mono)', fontSize: 11.5,
         color: 'var(--ink-2)', backdropFilter: 'blur(6px)',
       }}>
-        {issue.latitude?.toFixed(4)}, {issue.longitude?.toFixed(4)}<br/>
+        {hasCoords ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : 'Coordinates unavailable'}<br/>
         <span style={{ color: 'var(--ink-3)' }}>{issue.address || 'Address unknown'}</span>
       </div>
       <div style={{
@@ -533,7 +550,7 @@ function MapCard({ issue }) {
         background: 'rgba(7,9,15,0.7)', border: '1px solid var(--border-2)',
         borderRadius: 8, padding: '6px 10px', fontSize: 11, color: 'var(--ink-3)',
       }}>
-        Map — Issue Pin at {issue.address || 'location'}
+        {hasGoogleMapsKey() ? 'Google Maps API' : 'Google Maps fallback'}
       </div>
     </div>
   );

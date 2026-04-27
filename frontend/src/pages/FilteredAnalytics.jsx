@@ -1,21 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { Layout } from '../components/Layout.jsx';
+import AppShell from '../components/AppShell.jsx';
 import { FilterBar, CATEGORIES } from '../components/FilterBar.jsx';
 import { BarList, TrendBars, StatusPill, Skeleton, Empty } from '../components/Charts.jsx';
 import { Icon } from '../components/Icon.jsx';
 import { Card } from './AnalyticsOverview.jsx';
-import { analytics, isAdmin, dateRangeToFilters } from '../lib/api.js';
+import { analytics, isAdmin, dateRangeToFilters, Reports } from '../lib/api.js';
 import { getAdmin } from '../lib/auth.js';
 
 export default function FilteredAnalytics() {
   const admin = isAdmin();
+  const navigate = useNavigate();
   const adminUser = getAdmin();
   const citizenUser = (() => { try { return JSON.parse(localStorage.getItem('userData') || 'null'); } catch { return null; } })();
   const currentUser = admin
     ? { name: adminUser?.name || adminUser?.firstName || 'Admin' }
     : { name: citizenUser?.name || citizenUser?.firstName || 'Citizen' };
-  const [range, setRange]       = useState('30d');
+  const [range, setRange] = useState('all');
   const [category, setCategory] = useState('Garbage');
   const [status, setStatus]     = useState(null);
   const [area, setArea]         = useState(null);
@@ -58,14 +60,11 @@ export default function FilteredAnalytics() {
   const rangeLbl = { '7d': 'Last 7 Days', '30d': 'Last 30 Days', '90d': 'Last 90 Days', 'all': 'All Time' }[range];
 
   return (
-    <Layout
-      role={admin ? 'admin' : 'citizen'}
-      user={currentUser}
-      crumbs={['Analytics', 'Filtered']}
-    >
+    <AppShell crumbs={['Analytics', 'Filtered']}>
+      <div className="main">
       <div className="page-head">
         <div className="title-block">
-          <Link to="/analytics" className="row gap-8" style={{ color: 'var(--ink-mute)', fontSize: 12, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          <Link to="/admin/analytics" className="row gap-8" style={{ color: 'var(--ink-mute)', fontSize: 12, fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             <Icon name="arrow-left" size={12} /> Analytics Overview
           </Link>
           <h1 className="h1" style={{ marginTop: 4 }}>Filtered Analytics</h1>
@@ -83,7 +82,7 @@ export default function FilteredAnalytics() {
         category={category} setCategory={setCategory}
         status={status} setStatus={setStatus}
         area={area} setArea={setArea}
-        onClear={() => { setRange('30d'); setCategory(null); setStatus(null); setArea(null); }}
+        onClear={() => { setRange('30d'); setCategory(null); setStatus(null); setArea(null); navigate(admin ? '/admin/analytics' : '/analytics'); }}
       />
 
       {/* — Two-col layout: left breakdown + trend, right summary panel — */}
@@ -141,22 +140,11 @@ export default function FilteredAnalytics() {
             </Card>
           )}
 
-          {/* Cross-link to Map View for admin */}
-          {admin && (
-            <Card title="Drill Deeper" sub="Geographic view">
-              <Link to="/map" className="btn btn-ghost" style={{ width: '100%', justifyContent: 'space-between' }}>
-                <span><Icon name="map" size={13} /> &nbsp; Open Bubble Map</span>
-                <span className="dim mono" style={{ fontSize: 10, letterSpacing: '0.1em' }}>ADMIN →</span>
-              </Link>
-              <Link to="/analytics" className="btn btn-ghost" style={{ width: '100%', justifyContent: 'space-between', marginTop: 8 }}>
-                <span><Icon name="reports" size={13} /> &nbsp; Save This as Report</span>
-                <span className="dim mono" style={{ fontSize: 10, letterSpacing: '0.1em' }}>ADMIN →</span>
-              </Link>
-            </Card>
-          )}
+
         </div>
       </div>
-    </Layout>
+      </div>
+    </AppShell>
   );
 }
 
@@ -271,3 +259,49 @@ function StackedStatusBar({ by = {} }) {
 }
 
 function fmt(n) { return new Intl.NumberFormat('en-US').format(n); }
+
+function SaveReportBtn({ filters }) {
+  const [state, setState] = React.useState('idle');
+  const [errMsg, setErrMsg] = React.useState('');
+  const navigate = useNavigate();
+
+  async function handleSave() {
+    setState('saving');
+    setErrMsg('');
+    try {
+      const title = `Filtered Report · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      await Reports.create({ title, filters });
+      setState('done');
+      setTimeout(() => navigate('/admin/reports'), 1200);
+    } catch (e) {
+      setErrMsg(e.message || 'Failed to save report');
+      setState('err');
+      setTimeout(() => setState('idle'), 4000);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button
+        className="btn btn-ghost"
+        style={{ width: '100%', justifyContent: 'space-between' }}
+        onClick={handleSave}
+        disabled={state === 'saving' || state === 'done'}
+      >
+        <span>
+          <Icon name="reports" size={13} />
+          &nbsp;{' '}
+          {state === 'saving' ? 'Saving…' : state === 'done' ? '✓ Saved! Redirecting…' : 'Save This as Report'}
+        </span>
+        <span className="dim mono" style={{ fontSize: 10, letterSpacing: '0.1em' }}>
+          {state === 'done' ? 'SAVED' : 'ADMIN →'}
+        </span>
+      </button>
+      {state === 'err' && (
+        <div style={{ fontSize: 11, color: 'var(--st-rejected-fg)', marginTop: 4, paddingLeft: 4 }}>
+          {errMsg}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -3,7 +3,11 @@ import React from "react";
 import Icon from "./Icons";
 
 export const Button = ({ variant = "primary", size = "md", children, icon, iconRight, className = "", ...rest }) => {
-  const variants = { primary: "", ghost: "ghost", lime: "solid-lime" };
+  const variants = {
+    primary: "btn-primary",
+    ghost: "ghost btn-ghost",
+    lime: "btn-primary",
+  };
   const sizes = { sm: "sm", md: "", lg: "lg" };
   return (
     <button className={`btn ${variants[variant]} ${sizes[size]} ${className}`} {...rest}>

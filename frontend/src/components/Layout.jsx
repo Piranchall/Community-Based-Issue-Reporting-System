@@ -8,8 +8,8 @@ export function Sidebar({ user, role = 'citizen' }) {
   // Admin nav: All Issues, Map View, Analytics only
   const adminNav = [
     { to: '/admin/dashboard', label: 'All Issues', icon: 'dashboard' },
-    { to: '/map',             label: 'Map View',   icon: 'map' },
-    { to: '/analytics',       label: 'Analytics',  icon: 'analytics' },
+    { to: '/admin/map',       label: 'Map View',   icon: 'map' },
+    { to: '/admin/analytics', label: 'Analytics',  icon: 'analytics' },
   ];
 
   // Citizen nav: Dashboard, My Reports, Report Issue, Analytics
@@ -27,12 +27,12 @@ export function Sidebar({ user, role = 'citizen' }) {
     localStorage.removeItem('adminUser');
     localStorage.removeItem('userToken');
     localStorage.removeItem('userData');
-    window.location.href = admin ? '/admin/login' : '/login';
+    window.location.href = '/login';
   }
 
   return (
     <aside className="sidebar">
-      <Link to="/" className="brand">
+      <Link to={admin ? "/admin/dashboard" : "/dashboard"} className="brand">
         <div className="brand-mark">C</div>
         <div>
           <div className="brand-name">CivicReport</div>

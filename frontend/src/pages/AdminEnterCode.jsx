@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AuthShell } from './ForgotPassword';
+import { AuthShell } from './AdminForgotPassowrd';
 import { I } from '../components/Icons';
 
 export default function EnterCode() {

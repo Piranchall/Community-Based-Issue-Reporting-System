@@ -82,7 +82,8 @@ router.post('/reset-password', async (req, res) => {
 // GET /api/users/notifications
 router.get('/notifications', authMiddleware, async (req, res) => {
   try {
-    const notifications = await notificationService.listNotifications(req.user.userId);
+    const userId = String(req.user.userId || req.user.id);
+    const notifications = await notificationService.listNotifications(userId);
     res.status(200).json({
       message: 'Notifications retrieved',
       count:   notifications.length,
@@ -96,8 +97,9 @@ router.get('/notifications', authMiddleware, async (req, res) => {
 // GET /api/users/notifications/:id
 router.get('/notifications/:id', authMiddleware, async (req, res) => {
   try {
+    const userId = String(req.user.userId || req.user.id);
     const notification = await notificationService.getNotificationById(Number(req.params.id));
-    if (notification.userId !== req.user.userId) {
+    if (String(notification.userId) !== userId) {
       return res.status(403).json({ error: 'Access denied' });
     }
     res.status(200).json({ message: 'Notification retrieved', data: notification });
@@ -109,7 +111,8 @@ router.get('/notifications/:id', authMiddleware, async (req, res) => {
 // PUT /api/users/notifications/:id — mark as read
 router.put('/notifications/:id', authMiddleware, async (req, res) => {
   try {
-    const notification = await notificationService.markRead(Number(req.params.id), req.user.userId);
+    const userId = String(req.user.userId || req.user.id);
+    const notification = await notificationService.markRead(Number(req.params.id), userId);
     res.status(200).json({ message: 'Notification marked as read', data: notification });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
@@ -119,7 +122,8 @@ router.put('/notifications/:id', authMiddleware, async (req, res) => {
 // DELETE /api/users/notifications/:id
 router.delete('/notifications/:id', authMiddleware, async (req, res) => {
   try {
-    await notificationService.deleteNotification(Number(req.params.id), req.user.userId);
+    const userId = String(req.user.userId || req.user.id);
+    await notificationService.deleteNotification(Number(req.params.id), userId);
     res.status(200).json({ message: 'Notification deleted successfully' });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });

@@ -1,5 +1,7 @@
 // src/lib/api.js
 // Tiny fetch helper — prefixes API URL, attaches auth token, unwraps { data }.
+import { ROLE, getSession } from './auth.js';
+
 const API_URL =
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
@@ -13,13 +15,25 @@ export function resolveMediaUrl(path) {
   return `${API_URL}${path.startsWith("/") ? "" : "/"}${path}`;
 }
 
-const getToken = () => localStorage.getItem("userToken");
+const getToken = () => {
+  const sessionToken = getSession()?.token;
+  if (sessionToken) return sessionToken;
+  return localStorage.getItem("authToken") || localStorage.getItem("adminToken") || localStorage.getItem("userToken");
+};
 
 const clearAuthAndRedirect = () => {
   localStorage.removeItem("userToken");
   localStorage.removeItem("userData");
-  if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-    window.location.replace("/login");
+  localStorage.removeItem("adminToken");
+  localStorage.removeItem("adminUser");
+  localStorage.removeItem("authToken");
+  localStorage.removeItem("authRole");
+  localStorage.removeItem("authPrincipal");
+  if (typeof window !== "undefined") {
+    const target = '/login';
+    if (window.location.pathname !== target) {
+      window.location.replace(target);
+    }
   }
 };
 
@@ -67,7 +81,7 @@ export async function apiForm(path, formData, { method = "POST" } = {}) {
 const BASE = '/api';
 
 function authHeaders() {
-  const t = localStorage.getItem('adminToken');
+  const t = getToken();
   return t ? { Authorization: `Bearer ${t}` } : {};
 }
 
@@ -104,6 +118,8 @@ export const AdminAuth = {
   resetPassword: ({ email, token, newPassword }) =>
     request('/admin/reset-password', { method: 'POST', auth: false, body: { email, token, newPassword } }),
   profile: () => request('/admin/profile'),
+  changePassword: ({ currentPassword, newPassword }) =>
+    request('/admin/change-password', { method: 'POST', body: { currentPassword, newPassword } }),
 };
 
 /* -------- Issues -------- */
@@ -132,8 +148,26 @@ export const Notifications = {
   remove: (id) => request(`/notifications/${id}`, { method: 'DELETE' }),
 };
 
+/* -------- Reports -------- */
+export const Reports = {
+  create: ({ title, filters }) =>
+    request('/reports', { method: 'POST', body: { title, filters } }),
+  list: () => request('/reports'),
+  get: (id) => request(`/reports/${id}`),
+  remove: (id) => request(`/reports/${id}`, { method: 'DELETE' }),
+};
+
 // ─── Analytics (WF3) ────────────────────────────────────────────────────────
-export const isAdmin = () => !!localStorage.getItem('adminToken');
+export const isAdmin = () => getSession()?.role === ROLE.ADMIN;
+
+// Analytics endpoints return { message, data } — unwrap .data automatically
+// so AnalyticsOverview/FilteredAnalytics/MapView receive the raw data directly.
+// (AdminIssues, Notifications etc. use request() directly and access .data manually.)
+const analyticsRequest = async (path) => {
+  const r = await request(path);
+  // Backend wraps all responses as { message: '...', data: <actual data> }
+  return (r && typeof r === 'object' && 'data' in r) ? r.data : r;
+};
 
 const qs = (params = {}) => {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
@@ -144,18 +178,28 @@ const qs = (params = {}) => {
 };
 
 export const analytics = {
-  overview:                 (filters) => request(`/analytics/overview${qs(filters)}`),
-  byCategory:               (filters) => request(`/analytics/by-category${qs(filters)}`),
-  topCategories:            (filters) => request(`/analytics/top-categories${qs(filters)}`),
-  byArea:                   (filters) => request(`/analytics/by-area${qs(filters)}`),
-  trends:                   (filters) => request(`/analytics/trends${qs(filters)}`),
-  categorySummary:          (filters) => request(`/analytics/category-summary${qs(filters)}`),
-  resolutionTime:           (filters) => request(`/analytics/resolution-time${qs(filters)}`),
-  resolutionTimeByCategory: (filters) => request(`/analytics/resolution-time-by-category${qs(filters)}`),
+  overview:                 (filters) => analyticsRequest(`/analytics/overview${qs(filters)}`),
+  byCategory:               (filters) => analyticsRequest(`/analytics/by-category${qs(filters)}`),
+  topCategories:            (filters) => analyticsRequest(`/analytics/top-categories${qs(filters)}`),
+  byArea:                   (filters) => analyticsRequest(`/analytics/by-area${qs(filters)}`),
+  trends:                   (filters) => analyticsRequest(`/analytics/trends${qs(filters)}`),
+  categorySummary:          (filters) => analyticsRequest(`/analytics/category-summary${qs(filters)}`),
+  resolutionTime:           (filters) => analyticsRequest(`/analytics/resolution-time${qs(filters)}`),
+  resolutionTimeByCategory: (filters) => analyticsRequest(`/analytics/resolution-time-by-category${qs(filters)}`),
   exportCsv: async (filters, columns) => {
+    // Export returns text/csv, not JSON — must use res.text() not res.json()
     const params = { ...filters };
     if (columns?.length) params.columns = columns.join(',');
-    return request(`/analytics/export${qs(params)}`);
+    const path = `/analytics/export${qs(params)}`;
+    const res = await fetch(`${BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    });
+    if (!res.ok) {
+      let msg = `HTTP ${res.status}`;
+      try { const j = await res.json(); msg = j.error || j.message || msg; } catch {}
+      throw new Error(msg);
+    }
+    return res.text();
   },
 };
 
@@ -174,5 +218,6 @@ export function dateRangeToFilters(range) {
   if (!days) return {};
   const to = new Date(), from = new Date();
   from.setDate(from.getDate() - days);
-  return { dateFrom: from.toISOString().slice(0, 10), dateTo: to.toISOString().slice(0, 10) };
+  to.setHours(23, 59, 59, 999);
+  return { dateFrom: from.toISOString().slice(0, 10), dateTo: to.toISOString() };
 }

@@ -14,7 +14,7 @@ const ALL_COLUMNS = [
 ];
 
 export function ExportCsvModal({ open, onClose, initialFilters = {} }) {
-  const [range, setRange]         = useState('30d');
+  const [range, setRange]         = useState('all');
   const [category, setCategory]   = useState(initialFilters.category || '');
   const [status, setStatus]       = useState('');
   const [area, setArea]           = useState('');
