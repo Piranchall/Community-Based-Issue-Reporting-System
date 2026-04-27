@@ -577,6 +577,8 @@ a { color: inherit; text-decoration: none; }
   background: rgba(255,255,255,0.03);
   border-color: var(--stroke-strong);
   color: var(--ink-100);
+  -webkit-text-fill-color: var(--ink-100);
+  caret-color: var(--ink-100);
 }
 .field.dark .input::placeholder {
   color: var(--ink-500);

@@ -27,6 +27,8 @@ The system is built across three integrated workflows:
 | **Piranchal 29050** | WF3 — Analytics frontend and backend: overview charts, filtered analytics, map view, CSV export, saved reports |
 | **All 3 Members** | Integration: merging all three workflows, shared component system, bug fixes, seed data, documentation |
 
+---
+
 ## Features
 
 ### Citizen (WF1)
@@ -143,9 +145,9 @@ npx prisma db seed
 ```
 
 This creates:
-- 8 citizen accounts (`ali@citizen.com` … `wei@citizen.com`, password: `pass123`)
-- 5 admin accounts (`admin@city.gov`, `roads@city.gov`, `env@city.gov`, `water@city.gov`, `electric@city.gov`, password: `admin123`)
-- 54 issues across 10 Kuala Lumpur neighbourhoods with varied density, upvotes, status logs, comments, and notifications
+- 8 citizen accounts (password: `pass123`)
+- 5 admin accounts (password: `admin123`)
+- 54 issues across 10 Karachi neighbourhoods with varied density, upvotes, status logs, comments, and notifications
 
 ### 6. Start the backend server
 ```bash
@@ -176,15 +178,31 @@ Frontend runs at `http://localhost:5174`.
 
 ## Default Accounts
 
-| Role | Email | Password |
+### Citizen Accounts
+| Email | Password |
+|---|---|
+| ahmed@citizen.com | pass123 |
+| fatima@citizen.com | pass123 |
+| bilal@citizen.com | pass123 |
+| zara@citizen.com | pass123 |
+| usman@citizen.com | pass123 |
+| hina@citizen.com | pass123 |
+| tariq@citizen.com | pass123 |
+| sana@citizen.com | pass123 |
+
+### Admin Accounts
+| Email | Password | Department |
 |---|---|---|
-| Citizen | ali@citizen.com | pass123 |
-| Admin | admin@city.gov | admin123 |
+| admin@kmc.gov.pk | admin123 | KMC Admin |
+| roads@kmc.gov.pk | admin123 | Roads Department |
+| sanitation@kmc.gov.pk | admin123 | Sanitation Department |
+| kwsb@kmc.gov.pk | admin123 | KWSB Water Authority |
+| electric@kmc.gov.pk | admin123 | KESC Electricity Board |
 
 ---
 
 ## Project Structure
- 
+
 ```
 ├── server.js                  # Express entry point
 ├── routes/                    # API route handlers
@@ -203,15 +221,13 @@ Frontend runs at `http://localhost:5174`.
 ├── middleware/                # Auth middleware (citizen + admin)
 ├── prisma/
 │   ├── schema.prisma          # Database schema
-│   ├── seed.js                # Rich seed dataset
+│   ├── seed.js                # Karachi dataset seed
 │   └── migrations/            # Migration history
 ├── uploads/                   # Uploaded issue images
-└── frontend/                  # React frontend (see frontend/README.md)
+└── frontend/                  # React frontend
     └── src/
         ├── pages/             # Page components
         ├── components/        # Shared UI components
         ├── lib/               # API client, auth helpers, utilities
         └── styles/            # CSS design tokens and global styles
 ```
- 
----

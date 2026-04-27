@@ -26,6 +26,33 @@ const ReportIssue = () => {
   const [pin, setPin] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState("");
+  const [geocoding, setGeocoding] = useState(false);
+
+  // Reverse geocode lat/lng → human address using OpenStreetMap Nominatim (free, no key)
+  const reverseGeocode = async (lat, lng) => {
+    setGeocoding(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const data = await res.json();
+      if (data?.display_name) {
+        // Use road + suburb + city for a clean short address
+        const a = data.address || {};
+        const parts = [
+          a.road || a.pedestrian || a.footway,
+          a.suburb || a.neighbourhood || a.quarter,
+          a.city || a.town || a.village || a.county,
+        ].filter(Boolean);
+        setForm(f => ({ ...f, address: parts.join(', ') || data.display_name }));
+      }
+    } catch {
+      // Nominatim failed — leave address field empty for manual entry
+    } finally {
+      setGeocoding(false);
+    }
+  };
 
   const next = () => setStep(s => Math.min(s + 1, 3));
   const back = () => setStep(s => Math.max(s - 1, 0));
@@ -187,7 +214,12 @@ const ReportIssue = () => {
             <p style={{ color: "var(--ink-500)", fontSize: 13, margin: "0 0 20px" }}>
               Click on the map to place a pin, or use your current location.
             </p>
-            <MiniMap pickable selected={pin} onPick={setPin} tall showOverlayCoords={false} />
+            <MiniMap pickable selected={pin} onPick={(p) => {
+                setPin(p);
+                const lat = p.latitude ?? 47.6 + (p.y / 100 - 0.5) * -0.03;
+                const lng = p.longitude ?? -122.33 + (p.x / 100 - 0.5) * 0.04;
+                reverseGeocode(lat, lng);
+              }} tall showOverlayCoords={false} />
             <div style={{
               marginTop: 14, padding: "14px 18px",
               border: "1px solid var(--stroke-soft)", borderRadius: "var(--r-md)",
@@ -201,6 +233,10 @@ const ReportIssue = () => {
                 </div>
               </div>
               <div className="field dark" style={{ marginBottom: 0, width: 280 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label className="label" style={{ margin: 0 }}>Address</label>
+                  {geocoding && <span style={{ fontSize: 11, color: 'var(--ink-3)', fontFamily: 'var(--font-mono)' }}>detecting…</span>}
+                </div>
                 <input className="input" placeholder="Address (optional)"
                   value={form.address} onChange={e => setForm({ ...form, address: e.target.value })}/>
                 <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-500)", marginTop: 8 }}>
