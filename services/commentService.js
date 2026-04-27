@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const notificationService = require('./notificationService');
 
 // Create a comment on an issue
 const createComment = async (userId, issueId, text) => {
@@ -31,6 +32,15 @@ const createComment = async (userId, issueId, text) => {
         }
       }
     });
+
+    // Notify issue owner when someone else comments on their issue
+    if (String(issue.userId) !== String(userId)) {
+      await notificationService.createNotification({
+        userId: issue.userId,
+        issueId,
+        message: `New comment on your issue "${issue.title}": ${text}`,
+      });
+    }
 
     return comment;
   } catch (error) {

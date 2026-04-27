@@ -109,6 +109,7 @@ async function getTopCategories(filters = {}, limit = 5) {
 async function getByAreaStats(filters = {}) {
   const where = buildIssueWhere(filters);
 
+  // Group by address for counts
   const rows = await prisma.issue.groupBy({
     by: ['address'],
     where,
@@ -116,10 +117,31 @@ async function getByAreaStats(filters = {}) {
     orderBy: { _count: { address: 'desc' } },
   });
 
-  return rows.map((r) => ({
-    area:  r.address ?? 'Unknown',
-    count: r._count._all,
-  }));
+  // Get avg lat/lng per area so the frontend can project geographically
+  const coordRows = await prisma.issue.groupBy({
+    by: ['address'],
+    where,
+    _avg: { latitude: true, longitude: true },
+  });
+
+  const coordMap = {};
+  for (const r of coordRows) {
+    coordMap[r.address ?? 'Unknown'] = {
+      lat: r._avg.latitude,
+      lng: r._avg.longitude,
+    };
+  }
+
+  return rows.map((r) => {
+    const area = r.address ?? 'Unknown';
+    const coords = coordMap[area] || {};
+    return {
+      area,
+      count: r._count._all,
+      lat: coords.lat ?? null,
+      lng: coords.lng ?? null,
+    };
+  });
 }
 
 // ─── 5. Trend Line — Issues Reported Over Time ────────────────────────────────
@@ -190,7 +212,7 @@ async function getAvgResolutionTime(filters = {}) {
 
   return {
     avgResolutionHours: Math.round(avgHours * 100) / 100,
-    avgResolutionDays:  Math.round(avgDays  * 10)  / 10,  // 1 decimal, e.g. "4.1 days"
+    avgResolutionDays:  Math.round(avgDays  * 100) / 100,
     resolvedCount:      resolutionLogs.length,
   };
 }
@@ -248,13 +270,13 @@ async function getResolutionTimeByCategory(filters = {}) {
   const byCategory = Object.entries(categoryBuckets)
     .map(([category, { totalMs: catMs, count }]) => ({
       category,
-      avgResolutionDays: Math.round((catMs / count / MS_PER_DAY) * 10) / 10,
+      avgResolutionDays: Math.round((catMs / count / MS_PER_DAY) * 100) / 100,
       resolvedCount:     count,
     }))
     .sort((a, b) => b.avgResolutionDays - a.avgResolutionDays); // longest first
 
   const overallAvgDays =
-    Math.round((totalMs / resolutionLogs.length / MS_PER_DAY) * 10) / 10;
+    Math.round((totalMs / resolutionLogs.length / MS_PER_DAY) * 100) / 100;
 
   return { byCategory, overallAvgDays };
 }

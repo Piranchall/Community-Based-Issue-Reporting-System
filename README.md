@@ -1,248 +1,217 @@
 # CivicReport — Community-Based Issue Reporting System
 
-A community-driven backend where citizens report local issues, authorities manage and resolve them, and analytics track trends.
-
-**Stack:** Node.js · Express.js · PostgreSQL · Prisma ORM · JWT · bcryptjs · multer
+A full-stack web application that enables citizens to report, track, and upvote public issues in their neighbourhood, while giving city administrators a real-time dashboard to triage, resolve, and analyse reported problems across the city.
 
 ---
 
-## Workflows
+## Project Overview
 
-| Branch | Actor | Purpose |
+CivicReport bridges the gap between citizens and local government. Citizens submit issues (potholes, garbage, water leaks, broken streetlights, etc.) with photos and GPS location. Admins review, assign, and update statuses. Analytics and a density map give administrators data-driven insight into which areas need the most attention.
+
+The system is built across three integrated workflows:
+
+| Workflow | Role | Responsibility |
 |---|---|---|
-| `workflow-1` | Citizen | Register, report issues, upvote, comment |
-| `workflow-2` | Admin | Review issues, update statuses, notify reporters |
-| `workflow-3` | Admin + Public | Analytics dashboard, CSV export, saved reports |
+| WF1 | Citizen frontend | Issue reporting, tracking, upvoting, notifications |
+| WF2 | Admin frontend | Issue triage, status management, team operations |
+| WF3 | Analytics | Overview charts, filtered analytics, density map, CSV export |
 
 ---
 
-## Git Branch Structure
+## Team Contributions
 
-| Branch | Contents |
+| Member | Responsibilities |
 |---|---|
-| `workflow-1` | Citizen issue reporting |
-| `workflow-2` | Admin review and status management |
-| `workflow-3` | Analytics and reports |
-| `merge-workflows` | All three workflows integrated |
-| `main` | Final production-ready branch |
+| **Muhammad Hussain 29004** | WF1 — Citizen frontend: authentication, dashboard, issue reporting, comments, upvotes, notifications, profile |
+| **Muhammad Hussain 28985** | WF2 — Admin frontend: all issues dashboard, issue detail, status management, notifications, team management |
+| **Piranchal 29050** | WF3 — Analytics frontend and backend: overview charts, filtered analytics, map view, CSV export, saved reports |
+| **All 3 Members** | Integration: merging all three workflows, shared component system, bug fixes, seed data, documentation |
+
+## Features
+
+### Citizen (WF1)
+- Register and login with email or phone number
+- Forgot password and reset via token-verified email
+- Dashboard with summary cards (total, pending, resolved, in-progress) and nearby issues feed
+- Report an issue with title, category, description, GPS location, address, and optional photo
+- View full issue detail with status history, comments, and upvote count
+- Edit and delete own reports
+- Upvote community issues to signal priority
+- Add and remove comments on any issue
+- Real-time notification bell for status updates on reported or upvoted issues
+- Analytics overview — read-only access to city-wide trend data
+- Profile management (update details, change password)
+
+### Admin (WF2)
+- Separate admin login and password reset flow
+- All Issues dashboard with KPI cards (total, pending, in-progress, resolved, rejected, upvotes)
+- Priority column calculated from GPS density + upvote score (Haversine algorithm)
+- Filter issues by status, category, area, date range, and free-text search
+- Click-through to full issue detail — update status, add remarks, assign authority
+- Status logs — full audit trail of every status change across all issues
+- Notifications — real-time alerts for new citizen reports and status events
+- Team management — create additional admin accounts
+- Admin profile page with account details and password change
+- Saved Reports — view, download as CSV, or delete analytics snapshots
+
+### Analytics (WF3)
+- Analytics Overview with stat cards (total, pending, in-progress, resolved, rejected, upvotes)
+- Issues by Category — horizontal bar chart
+- Issues Over Time — smooth line chart with area fill and auto-scaled axes
+- Top 5 Categories — ranked list with percentage share
+- Average Resolution Time by Category — horizontal bar chart (admin only)
+- Filtered Analytics — drill into a specific category with status breakdown and area summary
+- Map View — geographic bubble density map showing issue concentration per neighbourhood
+- Export CSV — configurable column selection with date and filter options (admin only)
+- Saved Reports — snapshot reports persisted to database with CSV download
 
 ---
 
-## Setup
+## Frameworks and Major Libraries
 
+### Frontend Frameworks
+| Framework | Purpose |
+|---|---|
+| React 19 | Component-based UI framework |
+| Vite 6 | Frontend build tool and dev server |
+| React Router DOM 7 | Client-side routing and navigation |
+
+### Frontend Libraries
+| Library | Purpose |
+|---|---|
+| Vanilla CSS (custom) | Design system — tokens, layout, component styles |
+
+### Backend Frameworks
+| Framework | Purpose |
+|---|---|
+| Node.js | JavaScript runtime environment |
+| Express.js | Web application and REST API framework |
+
+### Backend Libraries
+| Library | Purpose |
+|---|---|
+| Prisma ORM | Type-safe database access and migrations |
+| PostgreSQL | Relational database |
+| bcryptjs | Password hashing |
+| jsonwebtoken | JWT-based authentication (citizen and admin) |
+| Multer | Multipart file upload handling |
+| Nodemailer | Transactional email for password reset |
+
+---
+
+## Setup Steps
+
+### Prerequisites
+- Node.js v18+
+- PostgreSQL database (local or managed)
+
+### 1. Clone the repository
 ```bash
-# 1. Install dependencies
+git clone https://github.com/Piranchall/Community-Based-Issue-Reporting-System.git
+cd Community-Based-Issue-Reporting-System
+git checkout main
+```
+
+### 2. Install backend dependencies
+```bash
 npm install
-
-# 2. Install nodemailer (required for forgot password email feature)
-npm install nodemailer
-
-# 3. Configure environment
-cp .env.example .env
-# Fill in all values in .env (see Environment Variables section below)
-
-# 4. Run migrations
-npx prisma migrate dev --name init
-
-# 5. Start server
-node server.js
-# Running on http://localhost:5001
 ```
 
-**.env values:**
+### 3. Configure backend environment
+Create a `.env` file in the project root:
+
 ```env
-DATABASE_URL=postgresql://postgres:password@localhost:5432/civicreport
-JWT_SECRET=your_secret_key_here
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DB_NAME"
+JWT_SECRET="your_jwt_secret_here"
 PORT=5001
-NODE_ENV=development
-EMAIL_USER=your_gmail_address@gmail.com
-EMAIL_PASS=your_gmail_app_password_here
+
+EMAIL_HOST="smtp.example.com"
+EMAIL_PORT=587
+EMAIL_USER="your_email_user"
+EMAIL_PASS="your_email_password"
+EMAIL_FROM="noreply@civicreport.local"
 ```
-**Getting Gmail App Password:**
-1. Go to your Google Account → Security
-2. Enable 2-Step Verification
-3. Go to Security → App Passwords
-4. Select app: Mail, device: Windows Computer
-5. Copy the 16-character password into `EMAIL_PASS`
 
----
-
-## Run with Docker (PostgreSQL)
-
+### 4. Run database migrations
 ```bash
-docker run --name civicreport-db \
-  -e POSTGRES_PASSWORD=postgres123 \
-  -e POSTGRES_DB=civicreport \
-  -p 5432:5432 -d postgres
+npx prisma migrate deploy
 ```
+
+### 5. Seed the database
+```bash
+npx prisma db seed
+```
+
+This creates:
+- 8 citizen accounts (`ali@citizen.com` … `wei@citizen.com`, password: `pass123`)
+- 5 admin accounts (`admin@city.gov`, `roads@city.gov`, `env@city.gov`, `water@city.gov`, `electric@city.gov`, password: `admin123`)
+- 54 issues across 10 Kuala Lumpur neighbourhoods with varied density, upvotes, status logs, comments, and notifications
+
+### 6. Start the backend server
+```bash
+npm run dev
+```
+
+Backend runs at `http://localhost:5001`.
+
+### 7. Install and configure frontend
+```bash
+cd frontend
+npm install
+```
+
+Create `frontend/.env`:
+```env
+VITE_API_BASE_URL=http://localhost:5001
+```
+
+### 8. Start the frontend
+```bash
+npm run dev
+```
+
+Frontend runs at `http://localhost:5174`.
 
 ---
 
+## Default Accounts
 
-## API Endpoints
-
-### Workflow 1 — Citizen
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/api/users/register` | No | Register (email + phone) |
-| POST | `/api/users/login` | No | Login with email **or** phone |
-| POST | `/api/users/forgot-password` | No | Request password reset token via email |
-| POST | `/api/users/reset-password` | No | Reset password using token from email |
-| POST | `/api/issues` | Yes | Report issue (image upload supported) |
-| GET | `/api/issues` | No | List issues — `?sortBy=priority`, `?area=`, `?category=` |
-| GET | `/api/issues/nearby` | No | Issues near coordinates — `?latitude=&longitude=&radius=` |
-| GET | `/api/issues/:id` | No | Issue detail |
-| POST | `/api/upvotes` | Yes | Upvote an issue |
-| DELETE | `/api/upvotes/:issueId` | Yes | Remove upvote |
-| POST | `/api/comments` | Yes | Comment on an issue |
-| GET | `/api/users/notifications` | Yes | Citizen notifications |
-
-**Query params for GET /api/issues:**
-
-| Param | Description |
-|---|---|
-| `category` | Filter by category (Garbage, Water, Road, Electricity) |
-| `status` | Filter by status |
-| `area` | Partial match on address field |
-| `sortBy` | `upvoteCount` for priority order, default is newest first |
-| `userId` | Filter by reporter |
-
-**Report an issue (multipart/form-data for image upload):**
-```json
-{
-  "title": "Overflowing garbage bins",
-  "description": "Bins overflowing near bus stop for 5 days",
-  "category": "Garbage",
-  "latitude": 24.8607,
-  "longitude": 67.0011,
-  "address": "Main Street, Downtown",
-  "image": "<file upload OR image URL string>"
-}
-```
-
-Images are served at: `GET /uploads/issues/<filename>`
-
-**Nearby issues:**
-```
-GET /api/issues/nearby?latitude=24.8607&longitude=67.0011&radius=5
-```
+| Role | Email | Password |
+|---|---|---|
+| Citizen | ali@citizen.com | pass123 |
+| Admin | admin@city.gov | admin123 |
 
 ---
 
-### Workflow 2 — Admin
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| POST | `/api/admin/register` | No | Create admin account |
-| POST | `/api/admin/login` | No | Admin login |
-| POST | `/api/admin/forgot-password` | No | Request admin password reset via email |
-| POST | `/api/admin/reset-password` | No | Reset admin password using token |
-| GET | `/api/admin/issues` | Admin | List issues — `?area=`, `?category=`, `?status=`, `?dateFrom=`, `?dateTo=`, `?sortBy=upvoteCount` |
-| GET | `/api/admin/issues/:id` | Admin | Full detail + status history |
-| PUT | `/api/admin/issues/:id` | Admin | Update status + remarks → auto-notifies reporter & upvoters |
-| GET | `/api/status-logs/issue/:issueId` | Admin | Status change history |
-| GET | `/api/notifications` | Admin | Admin notifications |
-
-
-**Query params for GET /api/admin/issues:**
-
-| Param | Description |
-|---|---|
-| `category` | Filter by category |
-| `status` | Filter by status |
-| `area` | Partial match on address |
-| `dateFrom` | ISO date filter start |
-| `dateTo` | ISO date filter end |
-| `sortBy` | `upvoteCount` or `status` or default `createdAt` |
-
-**Update status:**
-```json
-{
-  "newStatus": "In Progress",
-  "remarks": "Assigned to municipal waste team"
-}
+## Project Structure
+ 
 ```
-
-**Valid statuses:** `Pending` → `In Progress` → `Resolved` / `Rejected`
-
+├── server.js                  # Express entry point
+├── routes/                    # API route handlers
+│   ├── auth.js                # Citizen auth (register, login, reset)
+│   ├── admin.js               # Admin auth and profile
+│   ├── issues.js              # Citizen issue CRUD
+│   ├── Adminissues.js         # Admin issue management
+│   ├── analytics.js           # Analytics endpoints (WF3)
+│   ├── reports.js             # Saved reports CRUD (WF3)
+│   ├── notifications.js       # Notification management
+│   ├── statusLogs.js          # Status change history
+│   ├── upvotes.js             # Issue upvoting
+│   ├── comments.js            # Issue comments
+│   └── users.js               # Citizen profile
+├── services/                  # Business logic layer
+├── middleware/                # Auth middleware (citizen + admin)
+├── prisma/
+│   ├── schema.prisma          # Database schema
+│   ├── seed.js                # Rich seed dataset
+│   └── migrations/            # Migration history
+├── uploads/                   # Uploaded issue images
+└── frontend/                  # React frontend (see frontend/README.md)
+    └── src/
+        ├── pages/             # Page components
+        ├── components/        # Shared UI components
+        ├── lib/               # API client, auth helpers, utilities
+        └── styles/            # CSS design tokens and global styles
+```
+ 
 ---
-
-### Workflow 3 — Analytics
-
-**Public:**
-
-| Endpoint | Description |
-|---|---|
-| `GET /api/analytics/overview` | Total issues, status breakdown, total upvotes |
-| `GET /api/analytics/by-category` | Issue count per category |
-| `GET /api/analytics/top-categories` | Top N categories — `?limit=5` |
-| `GET /api/analytics/by-area` | Issue count per neighbourhood |
-| `GET /api/analytics/trends` | Daily issue count over time |
-| `GET /api/analytics/category-summary` | Summary panel — requires `?category=` |
-
-**Admin only:**
-
-| Endpoint | Description |
-|---|---|
-| `GET /api/analytics/resolution-time` | Average resolution time |
-| `GET /api/analytics/resolution-time-by-category` | Per-category resolution time |
-| `GET /api/analytics/export` | CSV download — `?columns=issueId,category,status,...` |
-| `POST /api/reports` | Save a report |
-| `GET /api/reports` | List saved reports |
-| `GET /api/reports/:id/download` | Download saved report as CSV |
-| `PUT /api/reports/:id` | Update / regenerate report |
-| `DELETE /api/reports/:id` | Delete report |
-
-
-**Common query params (all analytics endpoints):**
-
-| Param | Description |
-|---|---|
-| `dateFrom` | ISO date e.g. `2026-01-01` |
-| `dateTo` | ISO date e.g. `2026-12-31` |
-| `category` | e.g. `Garbage`, `Water`, `Road` |
-| `status` | `Pending`, `In Progress`, `Resolved`, `Rejected` |
-| `area` | Partial match on address |
-
-**CSV export column selection:**
-```
-GET /api/analytics/export?columns=issueId,category,status,reportDate
-```
-Valid column keys: `issueId`, `category`, `locationArea`, `status`, `reportDate`, `resolutionDate`, `upvoteCount`
-
-**Create report:**
-```json
-{
-  "title": "April 2026 — Garbage Issues",
-  "filters": {
-    "dateFrom": "2026-04-01",
-    "dateTo": "2026-04-30",
-    "category": "Garbage"
-  }
-}
-```
-
-**Update and regenerate:**
-```json
-{
-  "title": "Updated Title",
-  "filters": { "status": "Resolved" },
-  "regenerate": true
-}
-```
-
----
-
-## Error Codes
-
-| Code | Meaning |
-|---|---|
-| 200 | Success |
-| 201 | Created |
-| 400 | Bad request / missing or invalid fields |
-| 401 | Missing, expired, or invalid JWT |
-| 403 | Valid JWT but wrong role |
-| 404 | Resource not found |
-| 409 | Conflict (duplicate email) |
-| 500 | Internal server error |

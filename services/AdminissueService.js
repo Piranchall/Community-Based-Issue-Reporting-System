@@ -3,6 +3,7 @@ const statusLogService = require('./statusLogService');
 const notificationService = require('./notificationService');
 
 const VALID_STATUSES = ['Pending', 'In Progress', 'Resolved', 'Rejected'];
+const NOTIFIABLE_STATUSES = new Set(['In Progress', 'Resolved', 'Rejected']);
 
 async function listIssues({ category, status, dateFrom, dateTo, area, sortBy } = {}) {
   const where = {};
@@ -21,7 +22,36 @@ async function listIssues({ category, status, dateFrom, dateTo, area, sortBy } =
     where.address = { contains: area, mode: 'insensitive' };
   }
 
-  // sortBy: 'upvoteCount' (priority) | 'createdAt' (default) | 'status'
+  // sortBy: 'priority' | 'upvoteCount' | 'status' | 'createdAt' (default)
+  if (sortBy === 'priority') {
+    const issues = await prisma.issue.findMany({
+      where,
+      include: {
+        user: { select: { id: true, email: true, firstName: true, lastName: true } },
+      },
+    });
+
+    const DENSITY_RADIUS_KM = 1;
+    const DENSITY_WEIGHT    = 2;
+
+    const scored = issues.map(issue => {
+      const nearbyCount = issues.filter(other =>
+        other.id !== issue.id &&
+        haversineDistance(issue.latitude, issue.longitude, other.latitude, other.longitude)
+          <= DENSITY_RADIUS_KM
+      ).length;
+
+      return {
+        ...issue,
+        nearbyIssueCount: nearbyCount,
+        priorityScore: issue.upvoteCount + (nearbyCount * DENSITY_WEIGHT),
+      };
+    });
+
+    scored.sort((a, b) => b.priorityScore - a.priorityScore);
+    return scored;
+  }
+
   let orderBy;
   if (sortBy === 'upvoteCount') {
     orderBy = [{ upvoteCount: 'desc' }, { createdAt: 'desc' }];
@@ -31,12 +61,29 @@ async function listIssues({ category, status, dateFrom, dateTo, area, sortBy } =
     orderBy = { createdAt: 'desc' };
   }
 
-  return prisma.issue.findMany({
+  // For non-priority sorts, still compute priorityScore so the column always shows
+  const issues = await prisma.issue.findMany({
     where,
     orderBy,
     include: {
       user: { select: { id: true, email: true, firstName: true, lastName: true } },
     },
+  });
+
+  const DENSITY_RADIUS_KM = 1;
+  const DENSITY_WEIGHT    = 2;
+
+  return issues.map(issue => {
+    const nearbyCount = issues.filter(other =>
+      other.id !== issue.id &&
+      haversineDistance(issue.latitude, issue.longitude, other.latitude, other.longitude)
+        <= DENSITY_RADIUS_KM
+    ).length;
+    return {
+      ...issue,
+      nearbyIssueCount: nearbyCount,
+      priorityScore: issue.upvoteCount + (nearbyCount * DENSITY_WEIGHT),
+    };
   });
 }
 
@@ -96,25 +143,27 @@ async function updateIssueStatus(issueId, { newStatus, remarks, adminId }) {
     remarks: remarks || null,
   });
 
-  // Notify the original reporter
-  await notificationService.createNotification({
-    userId: issue.userId,
-    issueId,
-    message: `Your issue "${issue.title}" status changed from "${oldStatus}" to "${newStatus}".${remarks ? ` Remarks: ${remarks}` : ''}`,
-  });
-
-  // Notify users who upvoted (excluding the reporter)
-  const upvoters = await prisma.upvote.findMany({
-    where: { issueId, NOT: { userId: issue.userId } },
-    select: { userId: true },
-  });
-
-  for (const { userId } of upvoters) {
+  if (NOTIFIABLE_STATUSES.has(newStatus)) {
+    // Notify the original reporter for key lifecycle changes.
     await notificationService.createNotification({
-      userId,
+      userId: issue.userId,
       issueId,
-      message: `An issue you upvoted ("${issue.title}") has been updated to "${newStatus}".`,
+      message: `Your issue "${issue.title}" status changed from "${oldStatus}" to "${newStatus}".${remarks ? ` Remarks: ${remarks}` : ''}`,
     });
+
+    // Notify users who upvoted (excluding the reporter).
+    const upvoters = await prisma.upvote.findMany({
+      where: { issueId, NOT: { userId: issue.userId } },
+      select: { userId: true },
+    });
+
+    for (const { userId } of upvoters) {
+      await notificationService.createNotification({
+        userId,
+        issueId,
+        message: `An issue you upvoted ("${issue.title}") has been updated to "${newStatus}".`,
+      });
+    }
   }
 
   return updated;
@@ -131,6 +180,19 @@ async function deleteIssue(id) {
     }
     throw e;
   }
+}
+
+
+// Haversine distance in km — for priority density calculation
+function haversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 module.exports = { listIssues, getIssueById, updateIssueStatus, deleteIssue };
